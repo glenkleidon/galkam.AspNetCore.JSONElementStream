@@ -18,18 +18,24 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         private string currentStreamPath = String.Empty;
         private Stack<string> elementStack = new Stack<string>();
+
         private int chunkPosition = 0;
+        private int bytesInChunk = 0;
+        private byte[] chunk;
+
+        private Enums.StreamerStatus status;
 
         public JsonElementStreamer(Stream sourceStream, Stream outStream, Dictionary<string, IElementStreamWriter> elements)
         {
             this.sourceStream = sourceStream;
             this.outStream = outStream;
             this.elements = elements;
+            this.status = Enums.StreamerStatus.None;
         }
 
-        public Enums.StreamerStatus Status { get; } = Enums.StreamerStatus.None;
+        public Enums.StreamerStatus Status { get { return status; } }; 
         public int ChunkSize { get; set; } = 5000;
-        private Enums.StreamerStatus ProcessChunk(byte[] buffer)
+        private Enums.StreamerStatus ProcessChunk()
         {
             switch (Status)
             {
@@ -56,8 +62,14 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         public async Task<Enums.StreamerStatus> Next()
         {
-            var buffer = new Byte[ChunkSize];
-            var bytesRead = await sourceStream.ReadAsync(buffer,0, ChunkSize);
+            var newChunk = new Byte[ChunkSize];
+            var bytesRemaining = (ChunkSize - chunkPosition - 1);
+            if (bytesRemaining>0) Array.Copy(chunk, chunkPosition, newChunk, 0, bytesRemaining);
+            var maxBytesToRead = ChunkSize - bytesRemaining;
+            var chunkSize = await sourceStream.ReadAsync(chunk,ChunkSize-maxBytesToRead, maxBytesToRead);
+            ProcessChunk();
+            if (chunkSize == 0) status = Enums.StreamerStatus.Complete;
+
             return Status;
         }
 
