@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace UnitTestJsonElementStreaming
 {
     [TestClass]
-    public class TestJsonElementStreamer
+    public class TestJsonElementStreamerNext
     {
         private JsonElementStreamer testStreamer;
         private Stream outStream;
@@ -24,14 +24,16 @@ namespace UnitTestJsonElementStreaming
         }
 
         [TestMethod]
-        public async Task ElementStreamer_locates_a_target()
+        public async Task ElementStreamer_Parses()
         {
-            var json = "{\"document\" : \"" + Constants.TestMessageB64 + "\"}";
-            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
-            elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
+
+            
 
         }
     }

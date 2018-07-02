@@ -18,10 +18,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         private string currentStreamPath = String.Empty;
         private Stack<string> elementStack = new Stack<string>();
+        private string partialLabel = "";
         private Stack<Enums.JsonStatus> jsonStatus = new Stack<Enums.JsonStatus>();
         private Stack<int> arrayIndex = new Stack<int>();
 
-        private int chunkPosition = 0;
+        private int chunkPosition = -1;
         private int bytesInChunk = 0;
         private byte[] chunk;
 
@@ -45,8 +46,9 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             this.status = Enums.StreamerStatus.None;
         }
 
-        public Enums.StreamerStatus Status { get { return status; } };
+        public Enums.StreamerStatus Status { get { return status; } }
         public int ChunkSize { get; set; } = 5000;
+        public string JsonPath { get { return currentStreamPath; } }
         private Enums.StreamerStatus ProcessChunk()
         {
             switch (Status)
@@ -74,17 +76,22 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         {
             var elementPath = elementStack.Peek();
             byte b;
-            var label = "";
+            var label = partialLabel;
+            partialLabel = "";
             var hasData = false;
             var currentIndex = -1;
-            Enums.JsonStatus s = (jsonStatus.Count==0) ? Enums.JsonStatus.None : jsonStatus.Peek();
+            Enums.JsonStatus s = (jsonStatus.Count == 0) ? Enums.JsonStatus.None : jsonStatus.Peek();
             while (chunkPosition < ChunkSize - 1)
             {
                 b = chunk[chunkPosition++];
-                if (s == Enums.JsonStatus.InLabel && b !=DQuote)
+                if (b != DQuote)
                 {
-                    label = label + Convert.ToChar(b);
-                    continue;
+                    if (s == Enums.JsonStatus.InLabel)
+                    {
+                        label = label + Convert.ToChar(b);
+                        continue;
+                    }
+                    else if (s == Enums.JsonStatus.InQuotedText) continue;
                 }
                 switch (b)
                 {
@@ -109,7 +116,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.StartData:
                                 s = Enums.JsonStatus.InQuotedText;
                                 jsonStatus.Push(s);
-                                break;
+                                // critcal point - break here
+                                return elementPath;
                             default:
                                 BadJson();
                                 break;
@@ -136,8 +144,9 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         }
                         break;
                     case RightBrace:
-                        if (s!=Enums.JsonStatus.InObject) BadJson();
+                        if (s != Enums.JsonStatus.InObject) BadJson();
                         s = jsonStatus.Pop();
+                        if (s == Enums.JsonStatus.NextObjectElement) s = jsonStatus.Pop();
                         break;
                     case LeftBracket:
                         switch (s)
@@ -147,6 +156,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.InArray:
                                 s = Enums.JsonStatus.InArray;
                                 jsonStatus.Push(s);
+                                arrayIndex.Push(currentIndex);
+                                currentIndex = -1;
                                 break;
                             default:
                                 BadJson();
@@ -156,6 +167,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                     case RightBracket:
                         if (s != Enums.JsonStatus.InArray) BadJson();
                         s = jsonStatus.Pop();
+                        if (s == Enums.JsonStatus.NextArrayElement) s = jsonStatus.Pop();
+                        currentIndex = arrayIndex.Pop();
                         break;
                     case Comma:
                         if (s != Enums.JsonStatus.InData || !hasData) BadJson();
@@ -176,43 +189,18 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         };
                         break;
                     default:
-
-                }
-
-
-    }
-                
-                switch (s)
-                {
-                    case Enums.JsonStatus.None:
-                        // Find next quote to start reading
-                        break;
-                    case Enums.JsonStatus.InObject:
-                      break;
-                    case Enums.JsonStatus.StartLabel:
-                        break;
-                    case Enums.JsonStatus.StartData:
-                        // next 
-                       break;
-                    case Enums.JsonStatus.StartQuotedText:
-                       break;
-                    case Enums.JsonStatus.InArray:
-                       break;
-                    case Enums.JsonStatus.NextObjectElement:
-                       break;
-                    case Enums.JsonStatus.NextArrayElement:
-                    break;
-                    case Enums.JsonStatus.EndLabel:  
-                        // ok
-                        break;
-                    case Enums.JsonStatus.EndQuotedText:
-                        break;
-                    case Enums.JsonStatus.EndArray:
-                        break;
-                    case Enums.JsonStatus.EndObject:
+                        if (s == Enums.JsonStatus.StartData)
+                        {
+                            if (Char.IsWhiteSpace(Convert.ToChar(b))) continue;
+                            // we are at the beginning of the next data.
+                            status = Enums.StreamerStatus.StartOfData;
+                            return elementPath;
+                        }
+                        hasData = true;
                         break;
                 }
             }
+        partialLabel = label; 
             return "";
         }
 
@@ -220,7 +208,15 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         {
             var newChunk = new Byte[ChunkSize];
             var bytesRemaining = (ChunkSize - chunkPosition - 1);
-            if (bytesRemaining>0) Array.Copy(chunk, chunkPosition, newChunk, 0, bytesRemaining);
+            if (chunkPosition >= 0)
+            {
+                if (bytesRemaining > 0) Array.Copy(chunk, chunkPosition, newChunk, 0, bytesRemaining);
+            }
+            else
+            {
+                bytesRemaining = 0;
+            }
+            chunkPosition = 0;
             var maxBytesToRead = ChunkSize - bytesRemaining;
             var chunkSize = await sourceStream.ReadAsync(chunk,ChunkSize-maxBytesToRead, maxBytesToRead);
             ProcessChunk();
