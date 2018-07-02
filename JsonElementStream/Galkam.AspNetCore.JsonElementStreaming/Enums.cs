@@ -8,8 +8,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
     {
         public enum StreamerStatus { None=0, Error, Searching, Streaming, Complete };
         public enum JsonStatus {
-            None, StartObject, StartLabel, StartData,
-            StartQuotedText, StartArray, NextObjectElement, NextArrayElement,
+            None, InObject, InLabel, StartData, InData,
+            InQuotedText, InArray, NextObjectElement, NextArrayElement,
             EndLabel, EndQuotedText, EndArray, EndObject
         }
     }
