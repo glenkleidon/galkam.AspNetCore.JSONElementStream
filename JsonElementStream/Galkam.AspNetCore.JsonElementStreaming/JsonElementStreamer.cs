@@ -24,6 +24,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         private int chunkPosition = -1;
         private int bytesInChunk = 0;
+        private int nextStartPoint = 0;
+        private int dataStartPoint = 0;
         private byte[] chunk;
 
         //json Elements
@@ -66,7 +68,9 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                     //Capture to stream if this is a key, otherwise go next.
                     if (elements.ContainsKey(JsonPath))
                     {
-                        throw new NotImplementedException();
+                        dataStartPoint = chunkPosition;
+                        status = Enums.StreamerStatus.Streaming;
+                        StreamData();
                     }
                     else NextElement();
                     break;
@@ -77,6 +81,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
             }
             return Status;
+        }
+        private void StreamData()
+        {
+            var streamto = elements[JsonPath];
+            throw new NotImplementedException();
         }
         private void BadJson()
         {
@@ -95,8 +104,13 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             return status;
         }
 
+        private async Task NextChunkToOutStream(int startPoint, int endPoint)
+        {
+            await outStream.WriteAsync(chunk, startPoint, endPoint - nextStartPoint);
+        }
 
-        private string NextElement()
+
+        private async Task<string> NextElement()
         {
             var elementPath = elementStack.Peek();
             byte b;
@@ -106,6 +120,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             var currentIndex = -1;
             var escaping = false;
             Enums.JsonStatus s = (jsonStatus.Count == 0) ? Enums.JsonStatus.None : jsonStatus.Peek();
+            nextStartPoint = chunkPosition;
             while (chunkPosition < ChunkSize - 1)
             {
                 b = chunk[chunkPosition++];
@@ -246,8 +261,10 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         break;
                 }
             }
-        partialLabel = label; 
+            partialLabel = label;
+            await NextChunkToOutStream(nextStartPoint, chunkPosition);
             return "";
+
         }
 
         public async Task<Enums.StreamerStatus> Next()
