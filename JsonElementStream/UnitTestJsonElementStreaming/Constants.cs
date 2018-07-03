@@ -11,7 +11,7 @@ namespace UnitTestJsonElementStreaming
         public const string TestJSON =
                 "{" +
                 "	\"SimpleNumber\": 23," +
-                "	\"SimpleString\": \"Text1\"," +
+                "	\"SimpleString\": \"\\\"Text1\\\"\"," +
                 "	\"Complex\": {" +
                 "		\"Object1\": {" +
                 "			\"ElementNull\": null," +

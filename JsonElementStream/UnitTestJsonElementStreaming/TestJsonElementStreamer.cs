@@ -31,7 +31,10 @@ namespace UnitTestJsonElementStreaming
             elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(elements["$.document"].OutStream.Length> 0);
 
         }
     }

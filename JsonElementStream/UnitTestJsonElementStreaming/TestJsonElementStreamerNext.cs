@@ -24,17 +24,31 @@ namespace UnitTestJsonElementStreaming
         }
 
         [TestMethod]
-        public async Task ElementStreamer_Parses()
+        public async Task ElementStreamer_Stops_At_First_Element()
         {
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+
             await testStreamer.Next();
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
-
-            
-
+            Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
         }
+
+        [TestMethod]
+        public async Task ElementStream_Skips_First_element()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+
+            await testStreamer.Next(); // we want to ignore the first element
+            await testStreamer.Next(); // stop at second element
+
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.SimpleString", testStreamer.JsonPath);
+            Assert.AreEqual(Enums.JsonStatus.InQuotedText, testStreamer.JsonStatus);
+        }
+
     }
 }

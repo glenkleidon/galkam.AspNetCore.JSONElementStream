@@ -28,12 +28,13 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         //json Elements
         private const byte DQuote = 0x22;
-        private const byte Colon = 0xA3;
-        private const byte LeftBrace = 0xB7;
-        private const byte RightBrace = 0xD7;
-        private const byte LeftBracket = 0xB5;
-        private const byte RightBracket = 0xD5;
-        private const byte Comma = 0xc2;
+        private const byte Colon = 0x3A;
+        private const byte LeftBrace = 0x7B;
+        private const byte RightBrace = 0x7D;
+        private const byte LeftBracket = 0x5B;
+        private const byte RightBracket = 0x5D;
+        private const byte Comma = 0x2C;
+        private const byte BackSlash = 0x5C;
 
 
         private Enums.StreamerStatus status;
@@ -47,8 +48,9 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         }
 
         public Enums.StreamerStatus Status { get { return status; } }
+        public Enums.JsonStatus JsonStatus { get { return jsonStatus.Peek(); }  }
         public int ChunkSize { get; set; } = 5000;
-        public string JsonPath { get { return currentStreamPath; } }
+        public string JsonPath { get { return elementStack.Peek(); } }
         private Enums.StreamerStatus ProcessChunk()
         {
             switch (Status)
@@ -60,10 +62,19 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                     elementStack.Push(currentStreamPath);
                     NextElement();
                     break;
+                case Enums.StreamerStatus.StartOfData:
+                    //Capture to stream if this is a key, otherwise go next.
+                    if (elements.ContainsKey(JsonPath))
+                    {
+                        throw new NotImplementedException();
+                    }
+                    else NextElement();
+                    break;
                 case Enums.StreamerStatus.Searching:
                     break;
                 case Enums.StreamerStatus.Streaming:
                     break;
+
             }
             return Status;
         }
@@ -71,6 +82,19 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         {
             throw new ArgumentOutOfRangeException("Invalid Json Sequence");
         }
+
+        private Enums.JsonStatus PopStatus()
+        {
+            jsonStatus.Pop();
+            return jsonStatus.Peek();
+        }
+
+        private Enums.JsonStatus PushStatus(Enums.JsonStatus status)
+        {
+            jsonStatus.Push(status);
+            return status;
+        }
+
 
         private string NextElement()
         {
@@ -80,43 +104,63 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             partialLabel = "";
             var hasData = false;
             var currentIndex = -1;
+            var escaping = false;
             Enums.JsonStatus s = (jsonStatus.Count == 0) ? Enums.JsonStatus.None : jsonStatus.Peek();
             while (chunkPosition < ChunkSize - 1)
             {
                 b = chunk[chunkPosition++];
-                if (b != DQuote)
+                
+                // Check "In Quotes" State
+                if (s == Enums.JsonStatus.InLabel)
                 {
-                    if (s == Enums.JsonStatus.InLabel)
+                    if (b != DQuote)
                     {
                         label = label + Convert.ToChar(b);
+                        escaping = (b == BackSlash);
                         continue;
                     }
-                    else if (s == Enums.JsonStatus.InQuotedText) continue;
                 }
+                if (s == Enums.JsonStatus.InQuotedText && b != DQuote) 
+                {
+                    escaping = (b == BackSlash);
+                    continue;
+                }
+
+                //act on the received byte
                 switch (b)
                 {
                     case DQuote:
                         switch (s)
                         {
+                            case Enums.JsonStatus.NextObjectElement:
                             case Enums.JsonStatus.InObject:
                                 label = "";
-                                s = Enums.JsonStatus.InLabel;
-                                jsonStatus.Push(s);
+                                s = PushStatus(Enums.JsonStatus.InLabel);
                                 break;
                             case Enums.JsonStatus.InLabel:
+                                if (escaping)
+                                {
+                                    label = label + Convert.ToChar(b);
+                                    escaping = false;
+                                    continue;
+                                }
                                 if (label.Length == 0) BadJson();
                                 elementPath = elementPath + '.' + label;
                                 elementStack.Push(elementPath);
-                                s = jsonStatus.Pop();
+                                jsonStatus.Pop();
+                                s = PushStatus(Enums.JsonStatus.EndLabel);
                                 break;
                             case Enums.JsonStatus.InQuotedText:
-                                s = jsonStatus.Pop();
+                                if (!escaping) s = PopStatus();
+                                escaping = false;
                                 break;
                             case Enums.JsonStatus.NextArrayElement:
                             case Enums.JsonStatus.StartData:
-                                s = Enums.JsonStatus.InQuotedText;
-                                jsonStatus.Push(s);
                                 // critcal point - break here
+                                jsonStatus.Pop(); // get rid of StartData
+                                jsonStatus.Push(Enums.JsonStatus.InData);
+                                jsonStatus.Push(Enums.JsonStatus.InQuotedText);
+                                status = Enums.StreamerStatus.StartOfData;
                                 return elementPath;
                             default:
                                 BadJson();
@@ -125,8 +169,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         break;
                     case Colon:
                         if (s != Enums.JsonStatus.EndLabel) BadJson();
-                        s = Enums.JsonStatus.StartData;
-                        jsonStatus.Push(s);
+                        jsonStatus.Pop();
+                        s = PushStatus(Enums.JsonStatus.StartData);
                         break;
                     case LeftBrace:
                         switch (s)
@@ -135,8 +179,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.None:
                             case Enums.JsonStatus.InArray:
                             case Enums.JsonStatus.NextArrayElement:
-                                s = Enums.JsonStatus.InObject;
-                                jsonStatus.Push(s);
+                                s = PushStatus(Enums.JsonStatus.InObject);
                                 break;
                             default:
                                 BadJson();
@@ -145,8 +188,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         break;
                     case RightBrace:
                         if (s != Enums.JsonStatus.InObject) BadJson();
-                        s = jsonStatus.Pop();
-                        if (s == Enums.JsonStatus.NextObjectElement) s = jsonStatus.Pop();
+                        s = PopStatus();
+                        if (s == Enums.JsonStatus.NextObjectElement) s = PopStatus();
                         break;
                     case LeftBracket:
                         switch (s)
@@ -154,8 +197,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.StartData:
                             case Enums.JsonStatus.None:
                             case Enums.JsonStatus.InArray:
-                                s = Enums.JsonStatus.InArray;
-                                jsonStatus.Push(s);
+                                s = PushStatus(Enums.JsonStatus.InArray);
                                 arrayIndex.Push(currentIndex);
                                 currentIndex = -1;
                                 break;
@@ -166,22 +208,23 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         break;
                     case RightBracket:
                         if (s != Enums.JsonStatus.InArray) BadJson();
-                        s = jsonStatus.Pop();
-                        if (s == Enums.JsonStatus.NextArrayElement) s = jsonStatus.Pop();
+                        s = PopStatus();
+                        if (s == Enums.JsonStatus.NextArrayElement) s = PopStatus();
                         currentIndex = arrayIndex.Pop();
                         break;
                     case Comma:
                         if (s != Enums.JsonStatus.InData || !hasData) BadJson();
-                        s = jsonStatus.Pop();
+                        s = PopStatus();
                         switch (s)
                         {
                             case Enums.JsonStatus.InArray:
-                                s = Enums.JsonStatus.NextArrayElement;
-                                jsonStatus.Push(s);
+                                s = PushStatus(Enums.JsonStatus.NextArrayElement);
                                 currentIndex++;
                                 break;
                             case Enums.JsonStatus.InObject:
-                                jsonStatus.Push(Enums.JsonStatus.NextObjectElement);
+                                s = PushStatus(Enums.JsonStatus.NextObjectElement);
+                                elementStack.Pop();
+                                elementPath = elementStack.Peek();
                                 break;
                             default:
                                 BadJson();
@@ -189,11 +232,14 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         };
                         break;
                     default:
+                        if (Char.IsWhiteSpace(Convert.ToChar(b))) continue;
                         if (s == Enums.JsonStatus.StartData)
                         {
-                            if (Char.IsWhiteSpace(Convert.ToChar(b))) continue;
                             // we are at the beginning of the next data.
+                            hasData = true;
                             status = Enums.StreamerStatus.StartOfData;
+                            jsonStatus.Pop();
+                            s = PushStatus(Enums.JsonStatus.InData);
                             return elementPath;
                         }
                         hasData = true;
@@ -206,11 +252,19 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         public async Task<Enums.StreamerStatus> Next()
         {
-            var newChunk = new Byte[ChunkSize];
-            var bytesRemaining = (ChunkSize - chunkPosition - 1);
+            var newChunk = new byte[ChunkSize];
+            if (chunk == null) chunk = new byte[ChunkSize];
+
+            //Copy the remaining bytes from the exisitng chunk into the new chunk
+            var bytesRemaining = (bytesInChunk - chunkPosition - 1);
             if (chunkPosition >= 0)
             {
-                if (bytesRemaining > 0) Array.Copy(chunk, chunkPosition, newChunk, 0, bytesRemaining);
+                if (bytesRemaining > 0)
+                {
+                    Array.Copy(chunk, chunkPosition, newChunk, 0, bytesRemaining);
+                    chunk = newChunk;
+                    bytesInChunk = bytesRemaining;
+                }
             }
             else
             {
@@ -219,8 +273,10 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             chunkPosition = 0;
             var maxBytesToRead = ChunkSize - bytesRemaining;
             var chunkSize = await sourceStream.ReadAsync(chunk,ChunkSize-maxBytesToRead, maxBytesToRead);
+            bytesInChunk = bytesInChunk + chunkSize;
             ProcessChunk();
-            if (chunkSize == 0) status = Enums.StreamerStatus.Complete;
+            bytesRemaining = (bytesInChunk - chunkPosition - 1);
+            if (chunkSize == 0 && bytesRemaining<1 ) status = Enums.StreamerStatus.Complete;
 
             return Status;
         }
