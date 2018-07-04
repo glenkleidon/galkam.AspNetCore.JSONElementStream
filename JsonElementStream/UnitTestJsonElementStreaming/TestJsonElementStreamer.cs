@@ -14,8 +14,6 @@ namespace UnitTestJsonElementStreaming
         private JsonElementStreamer testStreamer;
         private Stream outStream;
         private Dictionary<string, IElementStreamWriter> elements;
-        const string TestMessage = "Test Message";
-        const string TestMessageB64 = "VGVzdCBNZXNzYWdlCg==";
 
         [TestInitialize]
         public void Setup()
@@ -28,12 +26,15 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task ElementStreamer_locates_a_target()
         {
-            var json = "{\"document\" : \"" + TestMessageB64 + "\"}";
+            var json = "{\"document\" : \"" + Constants.TestMessageB64 + "\"}";
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
             elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(elements["$.document"].OutStream.Length> 0);
 
         }
     }
