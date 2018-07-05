@@ -34,6 +34,7 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
             Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
+            Assert.IsTrue(outStream.Length > 0);
         }
 
         [TestMethod]
@@ -48,6 +49,8 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.SimpleString", testStreamer.JsonPath);
             Assert.AreEqual(Enums.JsonStatus.InQuotedText, testStreamer.JsonStatus);
+            Assert.IsTrue(outStream.Length > 0);
+
         }
 
     }
