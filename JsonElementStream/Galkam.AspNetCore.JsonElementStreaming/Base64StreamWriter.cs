@@ -57,7 +57,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         /// <returns>The number of bytes consumed by the conversion (which may not be the whole array)</returns>
         public async Task<int> Write(char[] buffer, int offset, int count)
         {
-            var charsToWrite = (int)(buffer.Length / 4);
+            var charsToWrite = 4*((int)(buffer.Length / 4));
             var newBytes = Convert.FromBase64CharArray(buffer, 0, charsToWrite);
             await outStream.WriteAsync(newBytes, 0, newBytes.Length);
             return charsToWrite;

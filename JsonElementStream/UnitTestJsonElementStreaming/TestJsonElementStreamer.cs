@@ -26,15 +26,28 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task ElementStreamer_locates_a_target()
         {
-            var json = "{\"document\" : \"" + Constants.TestMessageB64 + "\"}";
+            var documentHeader = "{\"document\" : \"";
+            var documentTail = "\"}";
+            var json = $"{documentHeader}{Constants.TestMessageB64}{documentTail}";
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
             elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
-            Assert.IsTrue(elements["$.document"].OutStream.Length> 0);
+            Assert.AreEqual(Enums.StreamerStatus.EndOfData, testStreamer.Status);
+            Assert.IsTrue(elements["$.document"].OutStream.Length > 0);
+            elements["$.document"].OutStream.Position = 0;
+            var elementStreamContent = new StreamReader(elements["$.document"].OutStream).ReadToEnd();
+            await testStreamer.Next();
+            // check that the content contains the document
+            Assert.IsTrue(outStream.Length > 0);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+
+            // Finally check the content
+            Assert.AreEqual($"{documentHeader}{documentTail}", outstreamContent);
+            Assert.AreEqual(Constants.TestMessage, elementStreamContent);
 
         }
     }

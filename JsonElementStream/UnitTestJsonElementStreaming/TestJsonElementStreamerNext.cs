@@ -34,7 +34,7 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
             Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
-            Assert.IsTrue(outStream.Length > 0);
+            Assert.IsTrue(outStream.Length > 0, "Stream is empty");
         }
 
         [TestMethod]
