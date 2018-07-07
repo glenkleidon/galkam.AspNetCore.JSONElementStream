@@ -25,7 +25,6 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         private int chunkPosition = -1;
         private int bytesInChunk = 0;
         private int nextStartPoint = 0;
-        private int dataStartPoint = 0;
         private byte[] chunk;
 
         //json Elements
@@ -112,15 +111,24 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
         private async Task NextChunkToStream(int startPoint, int endPoint, IElementStreamWriter writer=null)
         {
-            var bytesToWrite = endPoint - nextStartPoint;
+            var bytesToWrite = endPoint - nextStartPoint+1;
             if (writer != null)
             {
                 await writer.Write(chunk, startPoint, bytesToWrite);
             }
             else
             {
+                //TODO: Write use default writer for the stream.
                 await outStream.WriteAsync(chunk, startPoint, bytesToWrite);
             }
+        }
+
+        private bool IsNullSequence(int startPoint, int endPoint)
+        {
+            if (endPoint - startPoint != 3) return false;
+            var testNull = new byte[4];
+            Array.Copy(chunk, startPoint, testNull,0, 4);
+            return System.Text.Encoding.Default.GetString(testNull).Equals("null");
         }
 
         /// <summary>
@@ -135,7 +143,15 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             if (writer!=null && status == Enums.StreamerStatus.Streaming)
             {
                 // we are at the end of the data we want to redirect. So, end the write.
-                await NextChunkToStream(startPoint, endPoint, writer);
+                if (IsNullSequence(startPoint, endPoint))
+                {
+                    //TODO: change NULL to default stream writer
+                   await NextChunkToStream(startPoint, endPoint, null);
+                }
+                else
+                {
+                   await NextChunkToStream(startPoint, endPoint, writer);
+                }    
                 status = Enums.StreamerStatus.EndOfData;
                 return true;
             }
@@ -177,7 +193,9 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                     escaping = (b == BackSlash);
                     continue;
                 }
-                var endpoint = (startOfLastWhiteSpace > nextStartPoint) ? startOfLastWhiteSpace : chunkPosition - 1;
+                // if we hit a terminator, where was the last byte that belonged to the data?
+                var lastDataPosition = (startOfLastWhiteSpace > nextStartPoint) ? startOfLastWhiteSpace-1 : chunkPosition - 3;
+                
                 //act on the received byte
                 switch (b)
                 {
@@ -208,13 +226,12 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                     // special case:  End of quoted text for data being intercepted.
                                     // need to include the trialing double quote in the output.
                                     s = PopStatus();
-                                    if (jsonStatus.Peek()==Enums.JsonStatus.InData) s = PopStatus();
                                     status = Enums.StreamerStatus.Searching;
                                 }
                                 else if (!escaping)
                                 {
                                     chunkPosition--;
-                                    if (await AtEndOfDataWrite(writer, nextStartPoint, chunkPosition - 1)) return "";
+                                    if (await AtEndOfDataWrite(writer, nextStartPoint, chunkPosition-2)) return "";
                                 }
                                 escaping = false;
                                 break;
@@ -224,7 +241,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 jsonStatus.Pop(); // get rid of StartData
                                 jsonStatus.Push(Enums.JsonStatus.InData);
                                 jsonStatus.Push(Enums.JsonStatus.InQuotedText);
-                                await NextChunkToStream(nextStartPoint, chunkPosition, writer);
+                                await NextChunkToStream(nextStartPoint, chunkPosition-1, writer);
                                 status = Enums.StreamerStatus.StartOfData;
                                 return elementPath;
                             default:
@@ -253,11 +270,16 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         }
                         break;
                     case RightBrace:
+                        // unlikley to be at a data end point, but possible.
+                        if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition))
+                        {
+                            chunkPosition--; // in case this is the last character in the stream;
+                            return "";
+                        }
+                        if (s == Enums.JsonStatus.InData) s = PopStatus();
                         if (s != Enums.JsonStatus.InObject) BadJson();
                         s = PopStatus();
                         if (s == Enums.JsonStatus.NextObjectElement) s = PopStatus();
-                        // unlikley to be at a data end point, but possible.
-                        if (await AtEndOfDataWrite(writer, nextStartPoint, endpoint)) return "";
                         break;
                     case LeftBracket:
                         switch (s)
@@ -280,7 +302,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         s = PopStatus();
                         if (s == Enums.JsonStatus.NextArrayElement) s = PopStatus();
                         currentIndex = arrayIndex.Pop();
-                        if (await AtEndOfDataWrite(writer, nextStartPoint, endpoint)) return "";
+                        if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition))
+                        {
+                            chunkPosition--; // need to replay in case this is the end of the stream;
+                            return "";
+                        }
                         break;
                     case Comma:
                         if (s != Enums.JsonStatus.InData || !hasData) BadJson();
@@ -301,27 +327,37 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 break;
                         };
                         // theoretically possible to be here in a data write, but unlikley.
-                        if (await AtEndOfDataWrite(writer, nextStartPoint, endpoint)) return "";
+                        if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition)) return "";
                         break;
                     default:
-                        if (Char.IsWhiteSpace(Convert.ToChar(b))) continue;
-                        startOfLastWhiteSpace = chunkPosition + 1;
-                        if (s == Enums.JsonStatus.StartData)
+                        if (Char.IsWhiteSpace(Convert.ToChar(b)))
                         {
-                            // we are at the beginning of the next data.
-                            hasData = true;
-                            status = Enums.StreamerStatus.StartOfData;
-                            jsonStatus.Pop();
-                            s = PushStatus(Enums.JsonStatus.InData);
-                            await NextChunkToStream(nextStartPoint, chunkPosition, writer);
-                            return elementPath;
+                            if (hasData)
+                            {
+                                if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition)) return "";
+                            }
+                        }
+                        else
+                        {
+                            startOfLastWhiteSpace = chunkPosition;
+                            if (s == Enums.JsonStatus.StartData)
+                            {
+                                // we are at the beginning of the next data.
+                                hasData = true;
+                                status = Enums.StreamerStatus.StartOfData;
+                                jsonStatus.Pop();
+                                s = PushStatus(Enums.JsonStatus.InData);
+                                chunkPosition--;
+                                await NextChunkToStream(nextStartPoint, chunkPosition-1, writer);
+                                return elementPath;
+                            }
                         }
                         hasData = true;
                         break;
                 }
             }
             partialLabel = label;
-            await NextChunkToStream(nextStartPoint, chunkPosition, writer);
+            await NextChunkToStream(nextStartPoint, chunkPosition-1, writer);
             return "";
         }
 
