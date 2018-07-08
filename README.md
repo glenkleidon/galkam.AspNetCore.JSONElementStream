@@ -6,6 +6,9 @@ For JSON objects that contain large content object such as Base64Encoded data, t
 
 Raw JSON Message containing Base64 Image in the element _$.document.imagedata_ element
 JSON-->JSONElementStream --> Controller --> [FromBody] --> ViewModel
-           |_____ Base64-->IStream<ImageData>   
+           |_____ Base64-->IStream<ImageData>  
+
+__developing array elements_
+ 
 
 
