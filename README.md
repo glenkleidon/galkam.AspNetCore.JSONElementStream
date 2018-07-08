@@ -8,7 +8,7 @@ Raw JSON Message containing Base64 Image in the element _$.document.imagedata_ e
 JSON-->JSONElementStream --> Controller --> [FromBody] --> ViewModel
            |_____ Base64-->IStream<ImageData>  
 
-__developing array elements_
+__developing array elements__
  
 
 
