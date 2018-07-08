@@ -5,6 +5,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Galkam.AspNetCore.JsonElementStreaming.Writers;
 
 namespace UnitTestJsonElementStreaming
 {
@@ -70,8 +71,28 @@ namespace UnitTestJsonElementStreaming
             outStream.Position = 0;
             var outstreamContent = new StreamReader(outStream).ReadToEnd();
             Assert.AreEqual(json, outstreamContent);
-
         }
+
+        [TestMethod]
+        public async Task ElementStreamer_locates_an_integer_array_element()
+        {
+            var documentHeader = "{\"Array1\" : [";
+            var ArrayTail = "";
+            var json = $"{documentHeader}1,2,3,4{ArrayTail}";
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.Array1[0]", new IntegerValueStreamWriter());
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.EndOfData, testStreamer.Status);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(json, outstreamContent);
+        }
+
         [TestMethod]
         public async Task ElementStreamer_returns_full_output_when_no_elements_detected()
         {
@@ -83,6 +104,36 @@ namespace UnitTestJsonElementStreaming
             outStream.Position = 0;
             var outstreamContent = new StreamReader(outStream).ReadToEnd();
             Assert.AreEqual(Constants.TestJSON, outstreamContent);
+            Assert.IsNull(elements["$.ssssss"].OutStream);
+        }
+        [TestMethod]
+        public async Task ElementStreamer_returns_whole_object_when_requested()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            elements.Add("$.Complex.Object1", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(Constants.ComplexObject1, outstreamContent);
+        }
+
+        [TestMethod]
+        public async Task ElementStreamer_Optimizer_skips_whole_Object()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            elements.Add("$.Complex.Object1", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            throw new NotImplementedException("Optimizer is not implemented as yet.");
+        }
+        [TestMethod]
+        public async Task ElementStreamer_Optimizer_skips_whole_Array()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            elements.Add("$.Complex.Object1", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            throw new NotImplementedException("Optimizer is not implemented as yet.");
         }
     }
 }

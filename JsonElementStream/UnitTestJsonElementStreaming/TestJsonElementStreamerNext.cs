@@ -5,6 +5,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Galkam.AspNetCore.JsonElementStreaming.Writers;
 
 namespace UnitTestJsonElementStreaming
 {
@@ -14,6 +15,15 @@ namespace UnitTestJsonElementStreaming
         private JsonElementStreamer testStreamer;
         private Stream outStream;
         private Dictionary<string, IElementStreamWriter> elements;
+
+        private async Task SkipElements(int skipCount)
+        {
+            testStreamer.AlwaysStopOnNextData = true;
+            for (var i = 0; i < skipCount; i++) await testStreamer.Next();
+            testStreamer.AlwaysStopOnNextData = false;
+        }
+
+
 
         [TestInitialize]
         public void Setup()
@@ -28,7 +38,7 @@ namespace UnitTestJsonElementStreaming
         {
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
-
+            testStreamer.AlwaysStopOnNextData = true;
             await testStreamer.Next();
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
@@ -43,12 +53,44 @@ namespace UnitTestJsonElementStreaming
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
-            await testStreamer.Next(); // we want to ignore the first element
+            await SkipElements(1); // we want to ignore the first element
+            testStreamer.AlwaysStopOnNextData = true;
             await testStreamer.Next(); // stop at second element
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.SimpleString", testStreamer.JsonPath);
             Assert.AreEqual(Enums.JsonStatus.InQuotedText, testStreamer.JsonStatus);
+            Assert.IsTrue(outStream.Length > 0);
+
+        }
+
+        [TestMethod]
+        public async Task ElementStream_Stops_at_First_Complex_Object()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+
+            await SkipElements(2);
+            await testStreamer.Next(); // and stop at 3rd element
+
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.Complex.Object1.ElementNull", testStreamer.JsonPath);
+            Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
+            Assert.IsTrue(outStream.Length > 0);
+
+        }
+        [TestMethod]
+        public async Task ElementStream_Stops_at_First_Array_element()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+
+            await SkipElements(7);
+            await testStreamer.Next(); // and stop at 3rd element
+
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.Complex.ArrayOfDigits[0]", testStreamer.JsonPath);
+            Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
             Assert.IsTrue(outStream.Length > 0);
 
         }

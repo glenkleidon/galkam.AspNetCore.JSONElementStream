@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 {
     /// <summary>
     /// A binary writer for decoding base64 data to a stream.
