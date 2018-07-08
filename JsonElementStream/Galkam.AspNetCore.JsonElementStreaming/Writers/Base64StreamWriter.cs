@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 {
     /// <summary>
     /// A binary writer for decoding base64 data to a stream.
@@ -14,6 +14,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         private Stream outStream;
 
         public Stream OutStream { get => outStream; set => value = outStream; }
+
+        public IValueStreamWriter TypedValue => throw new NotImplementedException();
 
         public Base64StreamWriter()
         {
@@ -57,7 +59,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         /// <returns>The number of bytes consumed by the conversion (which may not be the whole array)</returns>
         public async Task<int> Write(char[] buffer, int offset, int count)
         {
-            var charsToWrite = (int)(buffer.Length / 4);
+            var charsToWrite = 4*((int)(buffer.Length / 4));
             var newBytes = Convert.FromBase64CharArray(buffer, 0, charsToWrite);
             await outStream.WriteAsync(newBytes, 0, newBytes.Length);
             return charsToWrite;

@@ -6,20 +6,24 @@ namespace UnitTestJsonElementStreaming
 {
     public class Constants
     {
+        public const string TestNumbers = "1234567890";
         public const string TestMessage = "Test Message";
         public const string TestMessageB64 = "VGVzdCBNZXNzYWdlCg==";
-        public const string TestJSON =
+        public const string ComplexObject1 =
                 "{" +
-                "	\"SimpleNumber\": 23," +
-                "	\"SimpleString\": \"\\\"Text1\\\"\"," +
-                "	\"Complex\": {" +
                 "		\"Object1\": {" +
                 "			\"ElementNull\": null," +
                 "			\"ElementNumber\": 35.2," +
                 "			\"ElementBoolean\": true," +
                 "			\"ElementDate\": \"2001-01-01T00:00:01Z\"," +
                 "			\"ElementString\": \"Text2\"" +
-                "		}," +
+                "		}";
+
+        public const string TestJSON =
+                "{" +
+                "	\"SimpleNumber\": 23," +
+                "	\"SimpleString\": \"\\\"Text1\\\"\"," +
+                "	\"Complex\": "+ComplexObject1+"," +
                 "		\"ArrayOfDigits\": [" +
                 "			0," +
                 "			1," +

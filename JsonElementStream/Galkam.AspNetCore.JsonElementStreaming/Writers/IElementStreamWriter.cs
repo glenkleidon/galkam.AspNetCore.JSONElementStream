@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 {
     public interface IElementStreamWriter
     {
@@ -9,5 +9,6 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         Task<int> Write(char[] buffer, int offset, int count);
         Task<int> WriteString(string text);
         Stream OutStream { get; set; }
+        IValueStreamWriter TypedValue { get; }
     }
 }
