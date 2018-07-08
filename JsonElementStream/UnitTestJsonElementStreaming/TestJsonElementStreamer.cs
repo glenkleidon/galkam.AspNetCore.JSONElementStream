@@ -84,14 +84,8 @@ namespace UnitTestJsonElementStreaming
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
-            await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.EndOfData, testStreamer.Status);
-            await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
-            outStream.Position = 0;
-            var outstreamContent = new StreamReader(outStream).ReadToEnd();
-            Assert.AreEqual(json, outstreamContent);
-        }
+            elements["$.Array1[0]"].
+        }   
 
         [TestMethod]
         public async Task ElementStreamer_returns_full_output_when_no_elements_detected()

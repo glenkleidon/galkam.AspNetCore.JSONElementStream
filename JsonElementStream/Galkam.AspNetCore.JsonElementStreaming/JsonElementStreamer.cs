@@ -316,6 +316,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.InArray:
                                 s = PushStatus(Enums.JsonStatus.InArray);
                                 currentIndex = -1;
+                                arrayIndex.Push(currentIndex);
                                 startOfLastWhiteSpace = -1;
                                 break;
                             default:
@@ -380,6 +381,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                     return elementPath;
                                 case Enums.JsonStatus.InArray:
                                 case Enums.JsonStatus.NextArrayElement:
+                                    currentIndex = (arrayIndex.Count > 0) ? arrayIndex.Pop() : -1;
                                     currentIndex++;
                                     arrayIndex.Push(currentIndex);
                                     var currentpath = (s == Enums.JsonStatus.NextArrayElement) ? elementStack.Pop() : elementStack.Peek();
