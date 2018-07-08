@@ -15,6 +15,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 
         public Stream OutStream { get => outStream; set => value = outStream; }
 
+        public IValueStreamWriter TypedValue => throw new NotImplementedException();
+
         public Base64StreamWriter()
         {
             this.outStream = outStream = new MemoryStream();

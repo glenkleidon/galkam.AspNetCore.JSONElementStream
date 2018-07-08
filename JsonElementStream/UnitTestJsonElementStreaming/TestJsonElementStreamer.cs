@@ -79,12 +79,13 @@ namespace UnitTestJsonElementStreaming
             var documentHeader = "{\"Array1\" : [";
             var ArrayTail = "";
             var json = $"{documentHeader}1,2,3,4{ArrayTail}";
+            var intWriter = new IntegerValueStreamWriter();
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
-            elements.Add("$.Array1[0]", new IntegerValueStreamWriter());
+            elements.Add("$.Array1[0]", intWriter);
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
-            elements["$.Array1[0]"].
+            Assert.AreEqual(1, intWriter.Value);
         }   
 
         [TestMethod]

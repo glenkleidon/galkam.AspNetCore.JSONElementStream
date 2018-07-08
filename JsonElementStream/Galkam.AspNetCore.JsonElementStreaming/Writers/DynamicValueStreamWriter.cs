@@ -4,45 +4,38 @@ using System.Text;
 
 namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 {
-    public class DynamicValueStreamWriter: BaseValueStreamWriter
+    public class DynamicValueStreamWriter : BaseValueStreamWriter, IValueStreamWriter
     {
-        public dynamic Value
-        {
-            get
-            {
-                this.writer.Flush();
-                if (string.IsNullOrWhiteSpace(writer.ToString())) return null;
-                return writer.ToString();
-            }
-        }
+        public override Type ValueType => null;
 
-        public bool IsNumber()
+        public dynamic Value { get => StreamedValue; } 
+
+        public override bool IsNumber()
         {
             return IsInteger() || IsFloat();
-
         }
-        public bool IsFloat()
+        public override bool IsFloat()
         {
             return AsFloat() != null;
         }
-        public bool IsDouble()
+        public override bool IsDouble()
         {
             return AsDouble() != null;
         }
-        public bool IsDecimal()
+        public override bool IsDecimal()
         {
             return AsDecimal() != null;
         }
-        public bool IsDate()
+        public override bool IsDateTime()
         {
-            return AsDate() != null;
+            return AsDateTime() != null;
         }
-        public bool IsInteger()
+        public override bool IsInteger()
         {
             return AsInteger() != null;
         }
 
-        public float? AsFloat()
+        public override float? AsFloat()
         {
             float v;
             var value = Value.ToString();
@@ -50,7 +43,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             if (float.TryParse(value, out v)) return v;
             return null;
         }
-        public Double? AsDouble()
+        public override Double? AsDouble()
         {
             Double v;
             var value = Value.ToString();
@@ -59,7 +52,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             return null;
 
         }
-        public Decimal? AsDecimal()
+        public override Decimal? AsDecimal()
         {
             Decimal v;
             var value = Value.ToString();
@@ -68,7 +61,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             return null;
 
         }
-        public DateTime? AsDate()
+        public override DateTime? AsDateTime()
         {
             DateTime v;
             var value = Value.ToString();
@@ -76,7 +69,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             if (DateTime.TryParse(value, out v)) return v;
             return null;
         }
-        public long? AsInteger()
+        public override long? AsInteger()
         {
             long v;
             var value = Value.ToString();

@@ -35,6 +35,30 @@ namespace UnitTestJsonElementStreaming
             Assert.IsNull(writer.Value);
             await writer.Write(TestNumbersBytes, 0, 10);
             Assert.AreEqual(1234567890, writer.Value);
+            long value = writer.TypedValue.StreamedValue;
+            Assert.AreEqual(1234567890, value);
+        }
+
+        [TestMethod]
+        public async Task BoolWriter_stores_as_stream_as_bool()
+        {
+            var writer = new BoolValueStreamWriter();
+            Assert.IsNull(writer.Value);
+            await writer.Write(TestNumbersBytes, 0, 1);
+            Assert.AreEqual(true, writer.Value);
+            Assert.AreEqual(typeof(bool), writer.ValueType);
+
+            writer = new BoolValueStreamWriter();
+            await writer.WriteString("F");
+            Assert.AreEqual(false, writer.AsBool());
+            bool value = writer.TypedValue.StreamedValue;
+            Assert.AreEqual(false, value);
+
+            writer = new BoolValueStreamWriter();
+            await writer.WriteString("TrUe");
+            Assert.AreEqual(true, writer.Value);
+            Assert.AreEqual(true, writer.AsBool());
+
         }
 
         [TestMethod]
@@ -65,7 +89,7 @@ namespace UnitTestJsonElementStreaming
                 await writer.Write(ca, 0, 1);
             }
             var dt = DateTime.Parse(testDate);
-            Assert.AreEqual(dt, writer.AsDate());
+            Assert.AreEqual(dt, writer.AsDateTime());
         }
 
         [TestMethod, ExpectedException(typeof(FormatException))]
@@ -79,7 +103,7 @@ namespace UnitTestJsonElementStreaming
                 await writer.Write(ca, 0, 1);
             }
             var dt = DateTime.Parse(testDate);
-            Assert.AreEqual(dt, writer.AsDate());
+            Assert.AreEqual(dt, writer.AsDateTime());
         }
 
         [TestMethod]
@@ -116,7 +140,7 @@ namespace UnitTestJsonElementStreaming
         public async Task DateWriter_stores_as_stream_as_date()
         {
             var writer = new DateTimeValueStreamWriter();
-            Assert.IsNull(writer.Value);
+            Assert.AreEqual(writer, writer.TypedValue);
             var testDate = "2009-05-01T14:57:32-04:00";
             foreach (char c in testDate)
             {
@@ -125,6 +149,10 @@ namespace UnitTestJsonElementStreaming
             }
             var dt = DateTime.Parse(testDate);
             Assert.AreEqual(dt, writer.Value);
+            Assert.AreEqual(dt, writer.AsDateTime());
+            Assert.IsNull(writer.AsInteger());
+            Assert.IsNull(writer.AsString());
+            Assert.AreEqual(testDate, writer.ToString());
         }
     }
 }

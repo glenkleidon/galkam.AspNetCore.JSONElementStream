@@ -9,5 +9,6 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         Task<int> Write(char[] buffer, int offset, int count);
         Task<int> WriteString(string text);
         Stream OutStream { get; set; }
+        IValueStreamWriter TypedValue { get; }
     }
 }
