@@ -190,6 +190,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             var currentIndex = (arrayIndex.Count>0)?arrayIndex.Peek():-1;
             var startOfLastWhiteSpace = -1; // keeps track of white space after data.
             var elementPath = elementStack.Peek();
+            var lastComma = -1;
 
             var escaping = false;
             Enums.JsonStatus s = (jsonStatus.Count == 0) ? Enums.JsonStatus.None : jsonStatus.Peek();
@@ -336,6 +337,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         }
                         break;
                     case Comma:
+                        lastComma = chunkPosition;
                         if (s != Enums.JsonStatus.InData || !hasData) BadJson();
                         s = PopStatus();
                         switch (s)
@@ -389,9 +391,17 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                     elementStack.Push(elementPath);
                                     s = PushStatus(Enums.JsonStatus.InData);
                                     chunkPosition--;
-                                    status = Enums.StreamerStatus.StartOfData;
-                                    await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
-                                    return elementPath;
+                                    if (status == Enums.StreamerStatus.EndOfData)
+                                    {
+                                        status =
+                                    }
+                                    else
+                                    {
+                                        status = Enums.StreamerStatus.StartOfData;
+                                        await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
+                                        return elementPath;
+                                    };
+                                    break;
                             }
                         }
                         hasData = true;
