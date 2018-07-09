@@ -19,7 +19,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         {
             this.writer.Flush();
             if (string.IsNullOrWhiteSpace(writer.ToString())) return null;
-            return writer.ToString();
+            return this.writer.ToString();
         }
         public dynamic StreamedValue
         {

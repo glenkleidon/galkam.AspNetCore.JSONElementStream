@@ -8,7 +8,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
     {
         public override Type ValueType => null;
 
-        public dynamic Value { get => StreamedValue; } 
+        public dynamic Value { get => AsString(); } 
 
         public override bool IsNumber()
         {
@@ -38,7 +38,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public override float? AsFloat()
         {
             float v;
-            var value = Value.ToString();
+            var value = AsString();
             if (value == null) return null;
             if (float.TryParse(value, out v)) return v;
             return null;
@@ -46,7 +46,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public override Double? AsDouble()
         {
             Double v;
-            var value = Value.ToString();
+            var value = AsString();
             if (value == null) return null;
             if (Double.TryParse(value, out v)) return v;
             return null;
@@ -55,7 +55,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public override Decimal? AsDecimal()
         {
             Decimal v;
-            var value = Value.ToString();
+            var value = AsString();
             if (value == null) return null;
             if (Decimal.TryParse(value, out v)) return v;
             return null;
@@ -64,7 +64,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public override DateTime? AsDateTime()
         {
             DateTime v;
-            var value = Value.ToString();
+            var value = AsString();
             if (value == null) return null;
             if (DateTime.TryParse(value, out v)) return v;
             return null;
@@ -72,10 +72,14 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public override long? AsInteger()
         {
             long v;
-            var value = Value.ToString();
+            var value = AsString();
             if (value == null) return null;
             if (long.TryParse(value, out v)) return v;
             return null;
+        }
+        public override string AsString()
+        {
+            return this.ToString();
         }
 
 
