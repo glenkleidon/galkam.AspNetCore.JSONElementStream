@@ -54,6 +54,21 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         public Enums.JsonStatus JsonStatus { get { return jsonStatus.Peek(); }  }
         public int ChunkSize { get; set; } = 5000;
         public string JsonPath { get { return elementStack.Peek(); } }
+        private async Task SearchForElements()
+        {
+            status = Enums.StreamerStatus.Searching;
+            var elementName = await NextElement();
+            var endOfChunk = (chunkPosition >= bytesInChunk);
+
+            while (!AlwaysStopOnNextData &&
+                   !endOfChunk && status != Enums.StreamerStatus.Complete
+                   && !elements.ContainsKey(elementName))
+            {
+                status = Enums.StreamerStatus.Searching;
+                elementName = await NextElement();
+                endOfChunk = (chunkPosition >= bytesInChunk);
+            }
+        }
         private async Task<Enums.StreamerStatus> ProcessChunk()
         {
             switch (Status)
@@ -63,20 +78,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                 case Enums.StreamerStatus.None:
                     currentStreamPath = "$";
                     elementStack.Push(currentStreamPath);
-
-                    // loop over the chunk looking for the next header.
-                    status = Enums.StreamerStatus.Searching;
-                    var elementName = await NextElement();
-                    var endOfChunk = (chunkPosition >= bytesInChunk);
-
-                    while (!AlwaysStopOnNextData && 
-                           !endOfChunk && status != Enums.StreamerStatus.Complete 
-                           && !elements.ContainsKey(elementName))
-                    {
-                        status = Enums.StreamerStatus.Searching;
-                        elementName = await NextElement();
-                        endOfChunk = (chunkPosition >= bytesInChunk);
-                    }
+                    await SearchForElements();
                     break;
                 case Enums.StreamerStatus.StartOfData:
                     //Capture to stream if this is a key, otherwise go next.
@@ -89,7 +91,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                     else await NextElement();
                     break;
                 case Enums.StreamerStatus.EndOfData:
-                    await NextElement();
+                    await SearchForElements();
                     break;
                 case Enums.StreamerStatus.Searching:
                     break;
@@ -290,8 +292,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.None:
                             case Enums.JsonStatus.InArray:
                             case Enums.JsonStatus.NextArrayElement:
+                                if (s == Enums.JsonStatus.StartData) jsonStatus.Pop();
                                 s = PushStatus(Enums.JsonStatus.InObject);
-                                break;
+                                status = Enums.StreamerStatus.StartOfData;
+                                await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
+                                return elementPath;
                             default:
                                 BadJson();
                                 break;
@@ -315,26 +320,33 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.StartData:
                             case Enums.JsonStatus.None:
                             case Enums.JsonStatus.InArray:
+                                if (s == Enums.JsonStatus.StartData) jsonStatus.Pop();
                                 s = PushStatus(Enums.JsonStatus.InArray);
                                 currentIndex = -1;
                                 arrayIndex.Push(currentIndex);
                                 startOfLastWhiteSpace = -1;
-                                break;
+                                status = Enums.StreamerStatus.StartOfData;
+                                await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
+                                return elementPath;
                             default:
                                 BadJson();
                                 break;
                         };
                         break;
                     case RightBracket:
+                        if (jsonStatus.Peek() == Enums.JsonStatus.InData)
+                        {
+                            jsonStatus.Pop();
+                            s = jsonStatus.Peek();
+                        }
                         if (s != Enums.JsonStatus.InArray) BadJson();
-                        s = PopStatus();
-                        if (s == Enums.JsonStatus.NextArrayElement) s = PopStatus();
-                        currentIndex = arrayIndex.Pop();
                         if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition))
                         {
                             chunkPosition--; // need to replay in case this is the end of the stream;
                             return "";
                         }
+                        currentIndex = arrayIndex.Pop();
+                        s = PopStatus();
                         break;
                     case Comma:
                         lastComma = chunkPosition;
@@ -385,6 +397,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 case Enums.JsonStatus.NextArrayElement:
                                     currentIndex = (arrayIndex.Count > 0) ? arrayIndex.Pop() : -1;
                                     currentIndex++;
+                                    if (s == Enums.JsonStatus.NextArrayElement) s = jsonStatus.Pop();
                                     arrayIndex.Push(currentIndex);
                                     var currentpath = (s == Enums.JsonStatus.NextArrayElement) ? elementStack.Pop() : elementStack.Peek();
                                     elementPath = arrayName(currentpath, currentIndex);
@@ -393,7 +406,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                     chunkPosition--;
                                     if (status == Enums.StreamerStatus.EndOfData)
                                     {
-                                        status =
+                                        status = Enums.StreamerStatus.Searching;
                                     }
                                     else
                                     {

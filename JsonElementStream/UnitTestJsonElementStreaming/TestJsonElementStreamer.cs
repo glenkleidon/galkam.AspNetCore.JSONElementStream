@@ -77,8 +77,7 @@ namespace UnitTestJsonElementStreaming
         public async Task ElementStreamer_locates_integer_0_array_element()
         {
             var documentHeader = "{\"Array1\" : [";
-            var ArrayTail = "";
-            var json = $"{documentHeader}1,2,3,4{ArrayTail}";
+            var json = $"{documentHeader}1,2,3,4]" + "}";
             var intWriter = new IntegerValueStreamWriter();
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
             elements.Add("$.Array1[0]", intWriter);
@@ -92,14 +91,13 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             outStream.Position = 0;
             var outstreamContent = new StreamReader(outStream).ReadToEnd();
-            Assert.AreEqual($"{documentHeader}2,3,4{ArrayTail}", outstreamContent);
+            Assert.AreEqual($"{documentHeader}2,3,4]" + "}", outstreamContent);
         }
         [TestMethod]
         public async Task ElementStreamer_locates_integer_1_array_element()
         {
             var documentHeader = "{\"Array1\" : [";
-            var ArrayTail = "";
-            var json = $"{documentHeader}1,2,3,4{ArrayTail}";
+            var json = $"{documentHeader}1,2,3,4]" + "}";
             var intWriter = new IntegerValueStreamWriter();
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
             elements.Add("$.Array1[1]", intWriter);
@@ -113,14 +111,30 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             outStream.Position = 0;
             var outstreamContent = new StreamReader(outStream).ReadToEnd();
-            Assert.AreEqual($"{documentHeader}1,3,4{ArrayTail}", outstreamContent);
+            Assert.AreEqual($"{documentHeader}1,3,4]" + "}", outstreamContent);
         }
         [TestMethod]
-        public async Task ElementStreamer_locates_integer_last_array_element()
+        public async Task ElementStreamer_locates_integer_last_array_element_Value()
         {
             var documentHeader = "{\"Array1\" : [";
-            var ArrayTail = "";
-            var json = $"{documentHeader}1,2,3,4{ArrayTail}";
+            var json = $"{documentHeader}1,2,3,4]" + "}"; 
+            var intWriter = new IntegerValueStreamWriter();
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.Array1[3]", intWriter);
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            await testStreamer.Next();
+            Assert.AreEqual(4, intWriter.Value);
+            Assert.AreEqual(Enums.StreamerStatus.EndOfData, testStreamer.Status);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+        }
+        [TestMethod]
+        public async Task ElementStreamer_removes_Trailing_Comma_in_array_element()
+        {
+            var documentHeader = "{\"Array1\" : [";
+            var json = $"{documentHeader}1,2,3,4]" + "}";
             var intWriter = new IntegerValueStreamWriter();
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
             elements.Add("$.Array1[3]", intWriter);
@@ -134,7 +148,7 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             outStream.Position = 0;
             var outstreamContent = new StreamReader(outStream).ReadToEnd();
-            Assert.AreEqual($"{documentHeader}1,2,3{ArrayTail}", outstreamContent);
+            Assert.AreEqual($"{documentHeader}1,2,3]" + "}", outstreamContent);
         }
 
         [TestMethod]
