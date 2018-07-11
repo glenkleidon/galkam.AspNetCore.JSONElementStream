@@ -16,4 +16,8 @@
     <ProjectReference Include="..\Galkam.AspNetCore.JsonElementStreaming\Galkam.AspNetCore.JsonElementStreaming.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="json\" />
+  </ItemGroup>
+
 </Project>
