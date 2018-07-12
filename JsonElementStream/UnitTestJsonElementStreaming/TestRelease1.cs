@@ -44,6 +44,16 @@ namespace UnitTestJsonElementStreaming
         {
             throw new NotImplementedException();
         }
+        [TestMethod]
+        public async Task Empty_Objects_and_Arrays_allowed()
+        {
+            throw new NotImplementedException();
+        }
+        [TestMethod]
+        public async Task Empty_Array_elements_are_not_allowed()
+        {
+            throw new NotImplementedException();
+        }
 
         [TestMethod]
         public async Task Base64_string_is_extracted_as_expected()
@@ -90,7 +100,20 @@ namespace UnitTestJsonElementStreaming
         {
             throw new NotImplementedException();
         }
-
+        [TestMethod]
+        public async Task Content_exceeding_buffer_size_extracted_as_expected()
+        {
+            throw new NotImplementedException();
+        }
+        [TestMethod]
+        public async Task Content_exactly_matching_buffer_size_extracted_as_expected()
+        {
+            throw new NotImplementedException();
+        }
+        public async Task Content_exceeding_2_buffer_sizes_extracted_as_expected()
+        {
+            throw new NotImplementedException();
+        }
 
 
     }
