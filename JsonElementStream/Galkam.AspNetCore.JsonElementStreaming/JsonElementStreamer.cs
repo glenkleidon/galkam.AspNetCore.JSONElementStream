@@ -128,9 +128,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         private string PushArray(Enums.JsonStatus status)
         {
             var currentIndex = (arrayIndex.Count > 0) ? arrayIndex.Pop() : -1;
-            currentIndex++;
+            arrayIndex.Push(++currentIndex);
             if (status == Enums.JsonStatus.NextArrayElement) status = jsonStatus.Pop();
-            arrayIndex.Push(currentIndex);
             var currentpath = (status == Enums.JsonStatus.NextArrayElement) ? elementStack.Pop() : elementStack.Peek();
             var currentElement = arrayName(currentpath, currentIndex);
             elementStack.Push(currentElement);
@@ -253,7 +252,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 break;
                             case Enums.JsonStatus.InLabel:
                                 if (label.Length == 0) BadJson();
-                                elementPath = elementPath + '.' + label;
+                                elementPath = $"{elementStack.Peek()}.{label}";
                                 elementStack.Push(elementPath);
                                 jsonStatus.Pop();
                                 s = PushStatus(Enums.JsonStatus.EndLabel);
@@ -279,11 +278,6 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 break;
                             case Enums.JsonStatus.NextArrayElement:
                             case Enums.JsonStatus.InArray:
-                                if (s == Enums.JsonStatus.NextArrayElement)
-                                {
-                                    jsonStatus.Pop();
-                                    s = jsonStatus.Peek();
-                                }
                                 elementPath = PushArray(s);
                                 jsonStatus.Push(Enums.JsonStatus.InData);
                                 jsonStatus.Push(Enums.JsonStatus.InQuotedText);
@@ -310,22 +304,25 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         startOfLastWhiteSpace = -1;
                         break;
                     case LeftBrace:
+                        if (s == Enums.JsonStatus.StartData) s = jsonStatus.Pop();
                         switch (s)
                         {
                             case Enums.JsonStatus.StartData:
+                            case Enums.JsonStatus.InData:
                             case Enums.JsonStatus.None:
+                                break;
                             case Enums.JsonStatus.InArray:
                             case Enums.JsonStatus.NextArrayElement:
-                                if (s == Enums.JsonStatus.StartData) jsonStatus.Pop();
-                                s = PushStatus(Enums.JsonStatus.InObject);
-                                status = Enums.StreamerStatus.StartOfData;
-                                await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
-                                return elementPath;
+                                PushArray(s);
+                                break;
                             default:
                                 BadJson();
                                 break;
                         }
-                        break;
+                        s = PushStatus(Enums.JsonStatus.InObject);
+                        status = Enums.StreamerStatus.StartOfData;
+                        await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
+                        return elementPath;
                     case RightBrace:
                         // unlikley to be at a data end point, but possible.
                         if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition))
@@ -333,18 +330,30 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             chunkPosition--; // in case this is the last character in the stream;
                             return "";
                         }
-                        if (s == Enums.JsonStatus.InData)
+                        if (s == Enums.JsonStatus.InData || s==Enums.JsonStatus.EndArray)
                         {
                             s = PopStatus();
                             hasData = false;
                         }
-                        if (s != Enums.JsonStatus.InObject) BadJson();
+                        switch (s)
+                        {
+                            case Enums.JsonStatus.InObject:
+                                break;
+                            case Enums.JsonStatus.EndObject:
+                                s = jsonStatus.Pop();
+                                break;
+                            default:
+                                BadJson();
+                                break;
+                        }
                         PopStatus();
                         if (s == Enums.JsonStatus.NextObjectElement) s = PopStatus();
                         s = PushStatus(Enums.JsonStatus.EndObject);
                         elementPath = elementStack.Pop();
                         break;
                     case LeftBracket:
+                        currentIndex = -1;
+                        arrayIndex.Push(currentIndex);
                         switch (s)
                         {
                             case Enums.JsonStatus.StartData:
@@ -352,8 +361,6 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             case Enums.JsonStatus.InArray:
                                 if (s == Enums.JsonStatus.StartData) jsonStatus.Pop();
                                 s = PushStatus(Enums.JsonStatus.InArray);
-                                currentIndex = -1;
-                                arrayIndex.Push(currentIndex);
                                 startOfLastWhiteSpace = -1;
                                 status = Enums.StreamerStatus.StartOfData;
                                 await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
@@ -370,38 +377,55 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                             jsonStatus.Pop();
                             s = jsonStatus.Peek();
                         }
-                        if (s != Enums.JsonStatus.InArray) BadJson();
+
+                        switch (s)
+                        {
+                            case Enums.JsonStatus.InObject:
+                            case Enums.JsonStatus.InArray:
+                                break;
+                            case Enums.JsonStatus.EndArray:
+                            case Enums.JsonStatus.EndObject:
+                                s = jsonStatus.Pop();
+                                break;
+                            default:
+                                BadJson();
+                                break;
+                        }
                         if (await AtEndOfDataWrite(writer, nextStartPoint, lastDataPosition))
                         {
                             chunkPosition--; // need to replay in case this is the end of the stream;
                             return "";
                         }
+                        //pop the last indexed element name eg array[2]
                         currentIndex = arrayIndex.Pop();
+                        if (currentIndex>-1) elementPath = elementStack.Pop();
                         PopStatus();
                         s = PushStatus(Enums.JsonStatus.EndArray);
-                        elementPath = elementStack.Pop();
                         break;
                     case Comma:
                         lastComma = chunkPosition;
-                        if (s != Enums.JsonStatus.EndArray &&
-                            s != Enums.JsonStatus.EndObject &&
-                            s != Enums.JsonStatus.InObject &&
-                            ( s != Enums.JsonStatus.InData || 
-                             (s == Enums.JsonStatus.InData && !hasData)
-                            )
-                           ) BadJson();
+                        switch (s)
+                        {
+                            case Enums.JsonStatus.EndArray:
+                            case Enums.JsonStatus.EndObject:
+                            case Enums.JsonStatus.InObject:
+                                break;
+                            case Enums.JsonStatus.InData:
+                                if (!hasData) BadJson();
+                                break;
+                            default:
+                                BadJson();
+                                break;
+                        }
                         s = PopStatus();
                         switch (s)
                         {
-                            case Enums.JsonStatus.NextArrayElement:
-                                break;
                             case Enums.JsonStatus.InArray:
                                 s = PushStatus(Enums.JsonStatus.NextArrayElement);
                                 break;
                             case Enums.JsonStatus.InObject:
+                                elementPath = elementStack.Pop();
                                 s = PushStatus(Enums.JsonStatus.NextObjectElement);
-                                elementStack.Pop();
-                                elementPath = elementStack.Peek();
                                 break;
                             default:
                                 BadJson();
@@ -434,13 +458,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                     return elementPath;
                                 case Enums.JsonStatus.InArray:
                                 case Enums.JsonStatus.NextArrayElement:
-                                    currentIndex = (arrayIndex.Count > 0) ? arrayIndex.Pop() : -1;
-                                    currentIndex++;
-                                    if (s == Enums.JsonStatus.NextArrayElement) s = jsonStatus.Pop();
-                                    arrayIndex.Push(currentIndex);
-                                    var currentpath = (s == Enums.JsonStatus.NextArrayElement) ? elementStack.Pop() : elementStack.Peek();
-                                    elementPath = arrayName(currentpath, currentIndex);
-                                    elementStack.Push(elementPath);
+                                    PushArray(s);
                                     s = PushStatus(Enums.JsonStatus.InData);
                                     hasData = false;
                                     chunkPosition--;
