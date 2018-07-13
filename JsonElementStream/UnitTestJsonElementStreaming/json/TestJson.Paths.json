@@ -7,7 +7,8 @@
 			"ElementNumber": 35.2,
 			"ElementBoolean": true,
 			"ElementDate": "2001-01-01T00:00:01Z",
-			"ElementString": "Text2"
+			"ElementString": "Text2",
+			"ElementBase64": "VGVzdCBNZXNzYWdlCg=="
 		},
 		"ArrayOfDigits": [
 			0,

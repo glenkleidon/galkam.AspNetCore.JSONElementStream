@@ -84,6 +84,7 @@ namespace UnitTestJsonElementStreaming
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.Array1[0]", testStreamer.JsonPath);
             await testStreamer.Next();
             Assert.AreEqual(1, intWriter.Value);
             Assert.AreEqual(Enums.StreamerStatus.EndOfData, testStreamer.Status);

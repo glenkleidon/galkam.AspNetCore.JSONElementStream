@@ -58,7 +58,35 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task Base64_string_is_extracted_as_expected()
         {
-            throw new NotImplementedException();
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            elements.Add("$.Complex.Object1.ElementBase64", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            // Locate the Element
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.Complex.Object1.ElementBase64", testStreamer.JsonPath);
+
+            // Read the element contents
+            await testStreamer.Next();
+            var b64stream = elements["$.Complex.Object1.ElementBase64"].OutStream;
+            Assert.IsNotNull(b64stream);
+            b64stream.Position = 0;
+            var elementStreamContent = new StreamReader(b64stream).ReadToEnd();
+            Assert.IsTrue(elementStreamContent.Length > 0);
+
+            // Read to End
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(outStream.Length > 0);
+            var OutContents = Constants.TestJSON.Substring(0, Constants.TestJSON.IndexOf(Constants.TestMessageB64));
+            OutContents = OutContents + Constants.TestJSON.Substring(
+                  Constants.TestJSON.IndexOf(Constants.TestMessageB64) + Constants.TestMessageB64.Length);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+
+            //Test contents
+            Assert.AreEqual(Constants.TestMessage, elementStreamContent);
+            Assert.AreEqual(OutContents, outstreamContent);
         }
         [TestMethod]
         public async Task Two_separate_Base64_string_is_extracted_as_expected()

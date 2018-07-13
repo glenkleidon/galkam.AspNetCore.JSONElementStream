@@ -8,6 +8,7 @@ $.Complex.Object1.ElementNumber
 $.Complex.Object1.ElementBoolean
 $.Complex.Object1.ElementDate
 $.Complex.Object1.ElementString
+"$.Complex.Object1.ElementBase64
 $.Complex.ArrayOfDigits
 $.Complex.ArrayOfDigits[0]
 $.Complex.ArrayOfDigits[1]

@@ -16,7 +16,8 @@ namespace UnitTestJsonElementStreaming
                 "			\"ElementNumber\": 35.2," +
                 "			\"ElementBoolean\": true," +
                 "			\"ElementDate\": \"2001-01-01T00:00:01Z\"," +
-                "			\"ElementString\": \"Text2\"" +
+                "			\"ElementString\": \"Text2\"," +
+                "           \"ElementBase64\": \"" + TestMessageB64+"\"" +
                 "		}";
 
         public const string TestJSON =
@@ -73,6 +74,7 @@ namespace UnitTestJsonElementStreaming
                 "$.Complex.Object1.ElementBoolean" ,
                 "$.Complex.Object1.ElementDate" ,
                 "$.Complex.Object1.ElementString" ,
+                "$.Complex.Object1.ElementBase64",
                 "$.Complex.ArrayOfDigits" ,
                 "$.Complex.ArrayOfDigits[0]" ,
                 "$.Complex.ArrayOfDigits[1]" ,

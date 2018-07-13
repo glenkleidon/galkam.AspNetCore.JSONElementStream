@@ -313,7 +313,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 break;
                             case Enums.JsonStatus.InArray:
                             case Enums.JsonStatus.NextArrayElement:
-                                PushArray(s);
+                                elementPath=PushArray(s);
                                 break;
                             default:
                                 BadJson();
@@ -458,7 +458,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                     return elementPath;
                                 case Enums.JsonStatus.InArray:
                                 case Enums.JsonStatus.NextArrayElement:
-                                    PushArray(s);
+                                    elementPath=PushArray(s);
                                     s = PushStatus(Enums.JsonStatus.InData);
                                     hasData = false;
                                     chunkPosition--;
