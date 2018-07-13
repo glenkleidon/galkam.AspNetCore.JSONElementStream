@@ -40,7 +40,9 @@ namespace UnitTestJsonElementStreaming
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             testStreamer.AlwaysStopOnNextData = true;
             await testStreamer.Next();
-
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$", testStreamer.JsonPath);
+            await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
             Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
@@ -53,7 +55,7 @@ namespace UnitTestJsonElementStreaming
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
-            await SkipElements(1); // we want to ignore the first element
+            await SkipElements(2); // we want to ignore the first element and the first object
             testStreamer.AlwaysStopOnNextData = true;
             await testStreamer.Next(); // stop at second element
 
@@ -70,12 +72,12 @@ namespace UnitTestJsonElementStreaming
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
-            await SkipElements(2);
+            await SkipElements(3);
             await testStreamer.Next(); // and stop at 3rd element
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
-            Assert.AreEqual("$.Complex.Object1.ElementNull", testStreamer.JsonPath);
-            Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
+            Assert.AreEqual("$.Complex", testStreamer.JsonPath);
+            Assert.AreEqual(Enums.JsonStatus.InObject, testStreamer.JsonStatus);
             Assert.IsTrue(outStream.Length > 0);
 
         }
@@ -85,12 +87,12 @@ namespace UnitTestJsonElementStreaming
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
-            await SkipElements(7);
+            await SkipElements(10);
             await testStreamer.Next(); // and stop at 3rd element
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
-            Assert.AreEqual("$.Complex.ArrayOfDigits[0]", testStreamer.JsonPath);
-            Assert.AreEqual(Enums.JsonStatus.InData, testStreamer.JsonStatus);
+            Assert.AreEqual("$.Complex.ArrayOfDigits", testStreamer.JsonPath);
+            Assert.AreEqual(Enums.JsonStatus.InArray, testStreamer.JsonStatus);
             Assert.IsTrue(outStream.Length > 0);
 
         }
