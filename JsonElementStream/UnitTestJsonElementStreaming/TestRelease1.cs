@@ -118,26 +118,33 @@ namespace UnitTestJsonElementStreaming
             elements.Add("$.ArrayOfComplexObjects[1].CO2.string", new Base64StreamWriter(new MemoryStream()));
 
             // Locate the Element
+            var c = 0;
             await testStreamer.Next();
+            while (c++ < 5 && testStreamer.Status == Enums.StreamerStatus.Searching) await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.Complex.Object1.ElementBase64", testStreamer.JsonPath);
 
             // Read the b64 element contents
+            c = 0;
             await testStreamer.Next();
+            while (c++ < 5 && testStreamer.Status == Enums.StreamerStatus.Streaming) await testStreamer.Next();
             var b64stream = elements["$.Complex.Object1.ElementBase64"].OutStream;
             Assert.IsNotNull(b64stream);
             b64stream.Position = 0;
             var elementStreamContent = new StreamReader(b64stream).ReadToEnd();
             Assert.IsTrue(elementStreamContent.Length > 0);
 
-
             // Locate the 2nd Base64 Element Contents
+            c = 0;
             await testStreamer.Next();
+            while (c++ < 5 && testStreamer.Status == Enums.StreamerStatus.Searching) await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.ArrayOfComplexObjects[1].CO2.string", testStreamer.JsonPath);
 
             // Read the b64 element contents
+            c = 0;
             await testStreamer.Next();
+            while (c++ < 5 && testStreamer.Status == Enums.StreamerStatus.Streaming) await testStreamer.Next();
             var b64Stream2 = elements["$.ArrayOfComplexObjects[1].CO2.string"].OutStream;
             Assert.IsNotNull(b64Stream2);
             b64Stream2.Position = 0;
@@ -145,7 +152,9 @@ namespace UnitTestJsonElementStreaming
             Assert.IsTrue(element2StreamContent.Length > 0);
 
             // Read to End
+            c = 0;
             await testStreamer.Next();
+            while (c++ < 5 && testStreamer.Status != Enums.StreamerStatus.Complete) await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             Assert.IsTrue(outStream.Length > 0);
 
@@ -375,7 +384,10 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task Content_exceeding_buffer_size_extracted_as_expected()
         {
-            throw new NotImplementedException();
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            testStreamer.ChunkSize = (Int32)TestStream.Length/2 ;
+            await DoTwoBase64Strings(testStreamer);
         }
         [TestMethod]
         public async Task Content_exactly_matching_buffer_size_extracted_as_expected()
