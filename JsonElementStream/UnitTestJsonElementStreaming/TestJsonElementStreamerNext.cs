@@ -78,7 +78,7 @@ namespace UnitTestJsonElementStreaming
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.Complex", testStreamer.JsonPath);
-            Assert.AreEqual(Enums.JsonStatus.InObject, testStreamer.JsonStatus);
+            Assert.AreEqual(Enums.JsonStatus.StartObject, testStreamer.JsonStatus);
             Assert.IsTrue(outStream.Length > 0);
 
         }

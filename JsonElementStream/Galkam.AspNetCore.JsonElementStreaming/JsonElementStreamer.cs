@@ -291,7 +291,13 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 jsonStatus.Pop();
                                 s = PushStatus(Enums.JsonStatus.InLabel);
                                 break;
+                            case Enums.JsonStatus.StartObject:
                             case Enums.JsonStatus.InObject:
+                                if (s == Enums.JsonStatus.StartObject)
+                                {
+                                    jsonStatus.Pop();
+                                    s = PushStatus(Enums.JsonStatus.InObject);
+                                }
                                 label = "";
                                 s = PushStatus(Enums.JsonStatus.InLabel);
                                 break;
@@ -363,7 +369,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                                 BadJson();
                                 break;
                         }
-                        s = PushStatus(Enums.JsonStatus.InObject);
+                        s = PushStatus(Enums.JsonStatus.StartObject);
                         status = Enums.StreamerStatus.StartOfData;
                         await NextChunkToStream(nextStartPoint, chunkPosition - 1, writer);
                         return elementPath;
@@ -382,6 +388,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                         switch (s)
                         {
                             case Enums.JsonStatus.InObject:
+                                break;
+                            case Enums.JsonStatus.StartObject:
+                                // OK, the check if the object we are dealing was empty
+                                // push a copy of the current object name
+                                elementStack.Push(elementStack.Peek());
                                 break;
                             case Enums.JsonStatus.EndObject:
                                 s = jsonStatus.Pop();
@@ -424,6 +435,10 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 
                         switch (s)
                         {
+                            case Enums.JsonStatus.StartObject:
+                                jsonStatus.Pop();
+                                s = PushStatus(Enums.JsonStatus.InObject);
+                                break;
                             case Enums.JsonStatus.InObject:
                             case Enums.JsonStatus.InArray:
                                 break;
