@@ -12,5 +12,6 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         IValueStreamWriter TypedValue { get; }
         bool CanIntercept { get; }
         bool Intercept { get; set; }
+        bool IsComplete { get; set; }
     }
 }

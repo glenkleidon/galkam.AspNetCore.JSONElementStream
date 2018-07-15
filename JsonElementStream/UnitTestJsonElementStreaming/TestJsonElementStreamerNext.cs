@@ -73,11 +73,12 @@ namespace UnitTestJsonElementStreaming
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
             await SkipElements(3);
-            await testStreamer.Next(); // and stop at 3rd element
+            testStreamer.AlwaysStopOnNextData = true;
+            await testStreamer.Next(); 
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.Complex", testStreamer.JsonPath);
-            Assert.AreEqual(Enums.JsonStatus.InObject, testStreamer.JsonStatus);
+            Assert.AreEqual(Enums.JsonStatus.StartObject, testStreamer.JsonStatus);
             Assert.IsTrue(outStream.Length > 0);
 
         }
@@ -88,7 +89,8 @@ namespace UnitTestJsonElementStreaming
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
             await SkipElements(11);
-            await testStreamer.Next(); // and stop at 3rd element
+            testStreamer.AlwaysStopOnNextData = true;
+            await testStreamer.Next(); 
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
             Assert.AreEqual("$.Complex.ArrayOfDigits", testStreamer.JsonPath);

@@ -173,19 +173,6 @@ namespace UnitTestJsonElementStreaming
         }
 
         [TestMethod]
-        public async Task ElementStreamer_returns_full_output_when_no_elements_detected()
-        {
-            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
-            elements.Add("$.ssssss", new Base64StreamWriter(new MemoryStream()));
-            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
-            await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
-            outStream.Position = 0;
-            var outstreamContent = new StreamReader(outStream).ReadToEnd();
-            Assert.AreEqual(Constants.TestJSON, outstreamContent);
-            Assert.IsNull(elements["$.ssssss"].OutStream);
-        }
-        [TestMethod]
         public async Task ElementStreamer_returns_whole_object_when_requested()
         {
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));

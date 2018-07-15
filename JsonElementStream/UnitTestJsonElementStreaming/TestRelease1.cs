@@ -48,10 +48,6 @@ namespace UnitTestJsonElementStreaming
 
             // Read to End
             await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.Searching, testStreamer.Status);
-            Assert.IsTrue(outStream.Length > 0);
-
-            await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             Assert.IsTrue(outStream.Length > 0);
 
@@ -63,11 +59,52 @@ namespace UnitTestJsonElementStreaming
             Assert.IsNull(text.AsString());
             Assert.AreEqual(Constants.TestJSON, outstreamContent);
         }
+
+        [TestMethod]
+        public async Task When_Nothing_Assigned_Whole_stream_is_flushed_outstream()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+
+            // Read to End
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(outStream.Length > 0);
+
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.IsTrue(outstreamContent.Length > 0);
+            //Test contents
+            Assert.AreEqual(Constants.TestJSON, outstreamContent);
+        }
         [TestMethod]
         public async Task Empty_Objects_and_Arrays_allowed()
         {
-            throw new NotImplementedException();
+            var json = "{\"document\" : {}, \"Array\": []}";
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.documents", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(json, outstreamContent);
+
         }
+        [TestMethod]
+        public async Task Empty_Arrays_and_empty_object_Arrays_allowed()
+        {
+            var json = "{\"Array\" : [], \"Object\": [{},{},{\"A\":[],\"B\":{}}]}";
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.documents", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(json, outstreamContent);
+        }
+
         [TestMethod,ExpectedException(typeof(FormatException))]
         public async Task Empty_Array_elements_are_not_allowed()
         {
@@ -102,6 +139,8 @@ namespace UnitTestJsonElementStreaming
             await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             Assert.IsTrue(outStream.Length > 0);
+            Assert.IsTrue(testStreamer.FlushComplete);
+
             var OutContents = Constants.TestJSON.Substring(0, Constants.TestJSON.IndexOf(Constants.TestMessageB64));
             OutContents = OutContents + Constants.TestJSON.Substring(
                   Constants.TestJSON.IndexOf(Constants.TestMessageB64) + Constants.TestMessageB64.Length);
@@ -372,14 +411,49 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(OutContents, outstreamContent);
         }
         [TestMethod]
-        public async Task Basic_Optimisation_Stops_Searching_when_lements_filled()
+        public async Task Basic_Optimisation_Stops_Searching_when_elements_filled()
         {
-            throw new NotImplementedException();
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            elements.Add("$.SimpleNumber", new DecimalValueStreamWriter());
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            // Locate the Element
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
+
+            // Read the element value
+            await testStreamer.Next();
+            var num = elements["$.SimpleNumber"].TypedValue.AsDecimal();
+            Assert.IsTrue(num != null,"number is unexpectedly null");
+
+            // check remaining text.
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(outStream.Length > 0);
+            Assert.IsTrue(testStreamer.FlushComplete);
+           
+
         }
         [TestMethod]
         public async Task Faulty_JSON_is_allowed_to_pass_through()
         {
-            throw new NotImplementedException();
+            var json = "{\"document\\ : \"}";
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            try
+            {
+                await testStreamer.Next();
+            }
+            catch
+            {
+                Assert.IsFalse(testStreamer.StreamIsValid);
+            }
+            await testStreamer.Next();
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(json, outstreamContent);
+
         }
         [TestMethod]
         public async Task Content_exceeding_buffer_size_extracted_as_expected()
@@ -397,11 +471,46 @@ namespace UnitTestJsonElementStreaming
             testStreamer.ChunkSize = (Int32)TestStream.Length;
             await DoTwoBase64Strings(testStreamer);
         }
+        [TestMethod]
         public async Task Content_exceeding_2_buffer_sizes_extracted_as_expected()
         {
-            throw new NotImplementedException();
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            testStreamer.ChunkSize = (Int32)TestStream.Length / 3;
+            await DoTwoBase64Strings(testStreamer);
         }
 
+        [TestMethod]
+        public async Task Base64_Content_Larger_than_Buffer_Size_works_asExpected()
+        {
+            var header = "{ \"data\": \"";
+            var tail = "\"}";
+            var TestStream = new MemoryStream();
+            elements.Add("$.data", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            TestStream.Write(Encoding.ASCII.GetBytes(header));
 
+            var json = Encoding.ASCII.GetBytes("MTIzNDU2Nzg5");
+            while ((TestStream.Length-header.Length) < testStreamer.ChunkSize) TestStream.Write(json);
+            TestStream.Write(Encoding.ASCII.GetBytes(tail));
+            TestStream.Position = 0;
+
+            await testStreamer.Next();
+            Assert.AreEqual("$.data", testStreamer.JsonPath);
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.EndOfData, testStreamer.Status);
+            var b64stream = elements["$.data"].OutStream;
+            Assert.IsNotNull(b64stream);
+            b64stream.Position = 0;
+            var elementStreamContent = new StreamReader(b64stream).ReadToEnd();
+            Assert.IsTrue(elementStreamContent.Length >= 3*(int)(testStreamer.ChunkSize/4));
+
+            await testStreamer.Next();
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual($"{header}{tail}", outstreamContent);
+        }
     }
 }

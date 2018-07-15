@@ -20,6 +20,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public virtual bool CanIntercept => true;
 
         public virtual bool Intercept { get; set; } = true;
+        public bool IsComplete { get; set; } = false;
 
         public Base64StreamWriter()
         {

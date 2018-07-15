@@ -6,9 +6,9 @@ namespace Galkam.AspNetCore.JsonElementStreaming
 {
     public static class Enums
     {
-        public enum StreamerStatus { None=0, Error, Searching, StartOfData, EndOfData, Streaming, Complete };
+        public enum StreamerStatus { None=0, Error, Searching, StartOfData, EndOfData, Streaming, Flushing, Complete };
         public enum JsonStatus {
-            None, InObject, InLabel, StartData, InData,
+            None, InObject, InLabel, StartObject, StartData, InData,
             InQuotedText, InArray, NextObjectElement, NextArrayElement,
             EndLabel, EndQuotedText, EndArray, EndObject
         }
