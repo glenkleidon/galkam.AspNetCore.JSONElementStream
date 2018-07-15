@@ -12,6 +12,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         string AsString();
         dynamic AsDynamic();
         bool? AsBool();
+        Single? AsSingle();
         bool IsDateTime();
         bool IsDecimal();
         bool IsDouble();
@@ -21,6 +22,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         bool IsString();
         bool IsDynamic();
         bool IsBool();
+        bool IsSingle();
         Type ValueType { get; }
         dynamic StreamedValue { get; }
 

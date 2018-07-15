@@ -22,6 +22,7 @@ namespace UnitTestJsonElementStreaming
         public async Task TextWriter_stores_as_stream_as_string()
         {
             var writer = new StringValueStreamWriter();
+            Assert.IsNull(writer.AsString());
             await writer.Write(TestNumbersBytes, 0, 10);
             Assert.AreEqual(Constants.TestNumbers, writer.Value);
             await writer.WriteString(Constants.TestMessage);
@@ -125,6 +126,29 @@ namespace UnitTestJsonElementStreaming
             await writer.WriteString(".");
             await writer.Write(TestNumbersBytes, 5, 5);
             Assert.AreEqual((Double)12345.67890, writer.Value);
+        }
+        [TestMethod]
+        public async Task SingleWriter_stores_as_stream_as_Single()
+        {
+            var writer = new SingleValueStreamWriter();
+            Assert.IsNull(writer.Value);
+            await writer.Write(TestNumbersBytes, 0, 5);
+            await writer.WriteString(".");
+            await writer.Write(TestNumbersBytes, 5, 5);
+            Assert.AreEqual((Single)12345.67890, writer.Value);
+        }
+        [TestMethod]
+        public async Task NumberWriter_stores_as_stream_as_any_number()
+        {
+            var writer = new NumberValueStreamWriter();
+            Assert.IsNull(writer.Value);
+            Assert.AreEqual(null, writer.ValueType);
+            await writer.Write(TestNumbersBytes, 0, 5);
+            Assert.AreEqual(typeof(long), writer.ValueType);
+            Assert.AreEqual(12345, writer.AsInteger());
+            await writer.WriteString(".");
+            await writer.Write(TestNumbersBytes, 5, 5);
+            Assert.AreEqual((Decimal)12345.67890, writer.Value);
         }
         [TestMethod]
         public async Task DecimalWriter_stores_as_stream_as_decimal()

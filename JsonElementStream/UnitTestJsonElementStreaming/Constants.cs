@@ -7,8 +7,10 @@ namespace UnitTestJsonElementStreaming
     public class Constants
     {
         public const string TestNumbers = "1234567890";
-        public const string TestMessage = "Test Message";
+        public const string TestMessage = "Test Message\n";
+        public const string TestMessage2 = "Message 2\n";
         public const string TestMessageB64 = "VGVzdCBNZXNzYWdlCg==";
+        public const string TestMessageB64_2 = "TWVzc2FnZSAyCg==";
         public const string ComplexObject1 =
                 "{" +
                 "		\"Object1\": {" +
@@ -49,7 +51,7 @@ namespace UnitTestJsonElementStreaming
                 "	]," +
                 "	\"ArrayOfComplexObjects\": [{" +
                 "			\"CO1\": {" +
-                "				\"number\": 66," +
+                "				\"number\": 66.2," +
                 "				\"string\": \"text5\"" +
                 "			}" +
                 "		}," +
@@ -57,7 +59,7 @@ namespace UnitTestJsonElementStreaming
                 "           \"COString\": \"Text4\"," +
                 "			\"CO2\": {" +
                 "				\"number\": 77," +
-                "				\"string\": \"text6\"" +
+                "				\"string\": \""+ TestMessageB64_2 + "\"" +
                 "			}" +
                 "		}" +
                 "	]" +

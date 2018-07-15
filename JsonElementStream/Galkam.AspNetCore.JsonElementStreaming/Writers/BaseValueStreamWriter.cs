@@ -7,8 +7,9 @@ using System.Threading.Tasks;
 namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 
 {
-    public abstract class BaseValueStreamWriter: IElementStreamWriter, IValueStreamWriter
+    public abstract class BaseValueStreamWriter : IElementStreamWriter, IValueStreamWriter
     {
+        protected bool hasWrites = false;
         protected StringWriter writer = new StringWriter();
         public Stream OutStream {
             get => null;
@@ -35,6 +36,10 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         }
 
         public abstract Type ValueType { get; }
+
+        public virtual bool CanIntercept => false;
+
+        public virtual bool Intercept { get; set; } = false;
 
         public virtual DateTime? AsDateTime()
         {
@@ -71,6 +76,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         }
 
         public virtual string AsString()
+        {
+            return null;
+        }
+
+        public virtual Single? AsSingle()
         {
             return null;
         }
@@ -120,6 +130,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             return false;
         }
 
+        public virtual bool IsSingle()
+        {
+            return false;
+        }
+
         public virtual async Task<int> Write(byte[] buffer, int offset, int count)
         {
             var bytes = new byte[count];
@@ -131,12 +146,14 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public virtual async Task<int> Write(char[] buffer, int offset, int count)
         {
             await writer.WriteAsync(buffer, offset, count);
+            hasWrites = count > 0;
             return count;
         }
 
         public virtual async Task<int> WriteString(string text)
         {
             await writer.WriteAsync(text);
+            hasWrites = text.Length > 0;
             return  text.Length;
         }
     }

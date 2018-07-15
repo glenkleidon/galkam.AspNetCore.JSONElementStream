@@ -10,5 +10,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         Task<int> WriteString(string text);
         Stream OutStream { get; set; }
         IValueStreamWriter TypedValue { get; }
+        bool CanIntercept { get; }
+        bool Intercept { get; set; }
     }
 }

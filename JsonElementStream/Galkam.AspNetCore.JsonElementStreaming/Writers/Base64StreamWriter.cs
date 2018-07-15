@@ -17,6 +17,10 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
 
         public IValueStreamWriter TypedValue => throw new NotImplementedException();
 
+        public virtual bool CanIntercept => true;
+
+        public virtual bool Intercept { get; set; } = true;
+
         public Base64StreamWriter()
         {
             this.outStream = outStream = new MemoryStream();

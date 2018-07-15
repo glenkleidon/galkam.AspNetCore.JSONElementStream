@@ -87,7 +87,7 @@ namespace UnitTestJsonElementStreaming
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
 
-            await SkipElements(10);
+            await SkipElements(11);
             await testStreamer.Next(); // and stop at 3rd element
 
             Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
