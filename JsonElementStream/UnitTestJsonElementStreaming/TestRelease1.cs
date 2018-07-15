@@ -80,7 +80,16 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task Empty_Objects_and_Arrays_allowed()
         {
-            throw new NotImplementedException();
+            var json = "{\"document\" : {}, \"Array\": []}";
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(json, outstreamContent);
+
         }
         [TestMethod,ExpectedException(typeof(FormatException))]
         public async Task Empty_Array_elements_are_not_allowed()
@@ -116,6 +125,8 @@ namespace UnitTestJsonElementStreaming
             await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             Assert.IsTrue(outStream.Length > 0);
+            Assert.IsTrue(testStreamer.FlushComplete);
+
             var OutContents = Constants.TestJSON.Substring(0, Constants.TestJSON.IndexOf(Constants.TestMessageB64));
             OutContents = OutContents + Constants.TestJSON.Substring(
                   Constants.TestJSON.IndexOf(Constants.TestMessageB64) + Constants.TestMessageB64.Length);
@@ -388,12 +399,47 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task Basic_Optimisation_Stops_Searching_when_elements_filled()
         {
-            throw new NotImplementedException();
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            elements.Add("$.SimpleNumber", new DecimalValueStreamWriter());
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            // Locate the Element
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.StartOfData, testStreamer.Status);
+            Assert.AreEqual("$.SimpleNumber", testStreamer.JsonPath);
+
+            // Read the element value
+            await testStreamer.Next();
+            var num = elements["$.SimpleNumber"].TypedValue.AsDecimal();
+            Assert.IsTrue(num != null,"number is unexpectedly null");
+
+            // check remaining text.
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(outStream.Length > 0);
+            Assert.IsTrue(testStreamer.FlushComplete);
+           
+
         }
         [TestMethod]
         public async Task Faulty_JSON_is_allowed_to_pass_through()
         {
-            throw new NotImplementedException();
+            var json = "{\"document\\ : \"}";
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(json));
+            elements.Add("$.document", new Base64StreamWriter(new MemoryStream()));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+            try
+            {
+                await testStreamer.Next();
+            }
+            catch
+            {
+                Assert.IsFalse(testStreamer.StreamIsValid);
+            }
+            await testStreamer.Next();
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.AreEqual(json, outstreamContent);
+
         }
         [TestMethod]
         public async Task Content_exceeding_buffer_size_extracted_as_expected()
