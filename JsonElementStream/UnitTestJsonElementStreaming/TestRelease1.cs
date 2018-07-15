@@ -489,8 +489,10 @@ namespace UnitTestJsonElementStreaming
             elements.Add("$.data", new Base64StreamWriter(new MemoryStream()));
             testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
             TestStream.Write(Encoding.ASCII.GetBytes(header));
+            var testData = "123456789";
+            var encodeTestData = "MTIzNDU2Nzg5";
 
-            var json = Encoding.ASCII.GetBytes("MTIzNDU2Nzg5");
+            var json = Encoding.ASCII.GetBytes(encodeTestData); // 
             while ((TestStream.Length-header.Length) < testStreamer.ChunkSize) TestStream.Write(json);
             TestStream.Write(Encoding.ASCII.GetBytes(tail));
             TestStream.Position = 0;
@@ -506,6 +508,16 @@ namespace UnitTestJsonElementStreaming
             b64stream.Position = 0;
             var elementStreamContent = new StreamReader(b64stream).ReadToEnd();
             Assert.IsTrue(elementStreamContent.Length >= 3*(int)(testStreamer.ChunkSize/4));
+            Console.WriteLine(elementStreamContent);
+            var p = 0;
+            var spos = 0;
+            foreach (var c in elementStreamContent)
+            {
+                spos++;
+                Assert.AreEqual(testData[p++], c, 
+                    $"Length of result {elementStreamContent.Length} - decode failure at {spos}\r\n'{elementStreamContent.Substring(spos)}'");
+                if (p >= 9) p = 0;
+            }
 
             await testStreamer.Next();
             outStream.Position = 0;

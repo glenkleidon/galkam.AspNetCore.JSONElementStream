@@ -12,6 +12,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
     public class Base64StreamWriter : IElementStreamWriter
     {
         private Stream outStream;
+        private string unwritten = "";
 
         public Stream OutStream { get => outStream; set => value = outStream; }
 
@@ -37,9 +38,11 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         /// <returns>The number of characters consumed by the conversion (which may NOT be the whole string)</returns>
         public async Task<int> WriteString(string text)
         {
-            var charsToWrite = (int) (text.Length/4);
-            var newbytes = Convert.FromBase64String(text.Substring(0, charsToWrite));
-            await outStream.WriteAsync(newbytes,0, newbytes.Length);
+            var textToWrite = unwritten + text;
+            var charsToWrite = (int) (textToWrite.Length/4);
+            var newChars = Convert.FromBase64String(textToWrite.Substring(0, charsToWrite));
+            unwritten = (charsToWrite < textToWrite.Length) ? textToWrite.Substring(charsToWrite) : "";
+            await outStream.WriteAsync(newChars,0, newChars.Length);
             return charsToWrite;
         }
         /// <summary>
@@ -64,8 +67,24 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         /// <returns>The number of bytes consumed by the conversion (which may not be the whole array)</returns>
         public async Task<int> Write(char[] buffer, int offset, int count)
         {
-            var charsToWrite = 4*((int)(buffer.Length / 4));
-            var newBytes = Convert.FromBase64CharArray(buffer, 0, charsToWrite);
+            // must write in multiples of 4.  We need to add any unwritten buffer to the front
+            var charsToWrite = 4*((int)((count + unwritten.Length) / 4));
+            var newChars = new char[charsToWrite];
+            var newDataStartPoint = unwritten.Length;
+            var newCount = charsToWrite - unwritten.Length;
+            if (unwritten.Length > 0)
+            {
+                Array.Copy(unwritten.ToCharArray(), 0, newChars, 0, unwritten.Length);
+            };
+            Array.Copy(buffer, 0, newChars, newDataStartPoint, newCount);
+            var newBytes = Convert.FromBase64CharArray(newChars, 0, charsToWrite);
+
+            //keep the unwritten part for next time.
+            var unwrittenSize = (count - newCount);
+            if (unwrittenSize>0)
+            {
+                unwritten = new string(buffer, count-unwrittenSize-1, unwrittenSize);
+            }
             await outStream.WriteAsync(newBytes, 0, newBytes.Length);
             return charsToWrite;
         }
