@@ -22,6 +22,8 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             if (string.IsNullOrWhiteSpace(writer.ToString())) return null;
             return this.writer.ToString();
         }
+        public bool IsComplete { get; set; } = false;
+
         public dynamic StreamedValue
         {
             get

@@ -48,10 +48,6 @@ namespace UnitTestJsonElementStreaming
 
             // Read to End
             await testStreamer.Next();
-            Assert.AreEqual(Enums.StreamerStatus.Searching, testStreamer.Status);
-            Assert.IsTrue(outStream.Length > 0);
-
-            await testStreamer.Next();
             Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
             Assert.IsTrue(outStream.Length > 0);
 
@@ -61,6 +57,24 @@ namespace UnitTestJsonElementStreaming
 
             //Test contents
             Assert.IsNull(text.AsString());
+            Assert.AreEqual(Constants.TestJSON, outstreamContent);
+        }
+
+        [TestMethod]
+        public async Task When_Nothing_Assigned_Whole_stream_is_flushed_outstream()
+        {
+            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
+            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+
+            // Read to End
+            await testStreamer.Next();
+            Assert.AreEqual(Enums.StreamerStatus.Complete, testStreamer.Status);
+            Assert.IsTrue(outStream.Length > 0);
+
+            outStream.Position = 0;
+            var outstreamContent = new StreamReader(outStream).ReadToEnd();
+            Assert.IsTrue(outstreamContent.Length > 0);
+            //Test contents
             Assert.AreEqual(Constants.TestJSON, outstreamContent);
         }
         [TestMethod]
@@ -372,7 +386,7 @@ namespace UnitTestJsonElementStreaming
             Assert.AreEqual(OutContents, outstreamContent);
         }
         [TestMethod]
-        public async Task Basic_Optimisation_Stops_Searching_when_lements_filled()
+        public async Task Basic_Optimisation_Stops_Searching_when_elements_filled()
         {
             throw new NotImplementedException();
         }

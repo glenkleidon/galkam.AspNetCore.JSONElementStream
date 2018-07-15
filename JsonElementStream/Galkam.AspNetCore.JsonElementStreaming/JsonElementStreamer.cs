@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Galkam.AspNetCore.JsonElementStreaming.Writers;
 using Newtonsoft.Json;
+using System.Linq;
 
 namespace Galkam.AspNetCore.JsonElementStreaming
 {
@@ -54,23 +55,36 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         public Enums.JsonStatus JsonStatus { get { return jsonStatus.Peek(); }  }
         public int ChunkSize { get; set; } = 5000;
         public string JsonPath { get { return elementStack.Peek(); } }
+        public virtual bool IsComplete() {
+            return elements.All(e => e.Value.IsComplete);
+        }
+        /// <summary>
+        /// Recursively searches for the next search element
+        /// </summary>
+        /// <returns></returns>
         private async Task SearchForElements()
         {
             status = Enums.StreamerStatus.Searching;
             var elementName = await NextElement();
             var endOfChunk = (chunkPosition >= bytesInChunk);
+            var seachCompleted = IsComplete(); // more efficient with local variable.
 
-            while (!AlwaysStopOnNextData &&
-                   !endOfChunk && status != Enums.StreamerStatus.Complete
-                   && !elements.ContainsKey(elementName))
+            while (
+                !AlwaysStopOnNextData &&
+                !endOfChunk && status != Enums.StreamerStatus.Complete &&
+                (seachCompleted || !elements.ContainsKey(elementName))
+            )
             {
                 status = Enums.StreamerStatus.Searching;
                 elementName = await NextElement();
                 endOfChunk = (chunkPosition >= bytesInChunk);
+                // again, for efficiency avoid calling IsComplete repeatedly
+                if (!seachCompleted) seachCompleted = IsComplete(); 
             }
         }
         private async Task<Enums.StreamerStatus> ProcessChunk()
         {
+
             switch (Status)
             {
                 case Enums.StreamerStatus.Complete:
@@ -78,7 +92,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                 case Enums.StreamerStatus.None:
                     currentStreamPath = "$";
                     elementStack.Push(currentStreamPath);
-                    await SearchForElements();
+                    await SearchForElements(); 
                     break;
                 case Enums.StreamerStatus.StartOfData:
                     //Capture to stream if this is a key, otherwise go next.
@@ -86,18 +100,21 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                     {
                         await StreamData();
                         // was the write complete-ok, recusrively call until complete.
-                        if (status == Enums.StreamerStatus.Streaming) await Next();
+                        while (Status == Enums.StreamerStatus.Streaming)
+                        {
+                            var bytesRead = await GetMoreBytesIfNeeded();
+                            if (bytesRead == 0) throw new EndOfStreamException($"Incomplete data in Element {JsonPath}.");
+                            await StreamData();
+                        }
                     }
-                    else await NextElement();
-                    break;
-                case Enums.StreamerStatus.EndOfData:
-                    await SearchForElements();
+                    else await NextElement(); 
                     break;
                 case Enums.StreamerStatus.Searching:
+                case Enums.StreamerStatus.EndOfData:
+                    await SearchForElements(); 
                     break;
                 case Enums.StreamerStatus.Streaming:
-                    break;
-
+                    throw new FormatException($"Unexpectedly encountered Streaming Status in Class {this.GetType().FullName}");
             }
             return Status;
         }
@@ -188,6 +205,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
                    await NextChunkToStream(startPoint, endPoint, writer, endpointForNonIntercept);
                 }    
                 status = Enums.StreamerStatus.EndOfData;
+                writer.IsComplete = true;
                 return true;
             }
             else return false;
@@ -212,11 +230,18 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             var startOfLastWhiteSpace = -1; // keeps track of white space after data.
             var elementPath = elementStack.Peek();
             var lastComma = -1;
+            var searchCompleted = IsComplete(); // more efficient with local variable.
+
 
             var escaping = false;
             Enums.JsonStatus s = (jsonStatus.Count == 0) ? Enums.JsonStatus.None : jsonStatus.Peek();
             nextStartPoint = chunkPosition;
 
+            // If there is no more work, set the chunk position to the end.
+            if (status != Enums.StreamerStatus.Streaming && searchCompleted && !AlwaysStopOnNextData)
+            {
+                chunkPosition = bytesInChunk;
+            }
             // process the bytes in the stream;
             while (chunkPosition < bytesInChunk)
             {
@@ -491,37 +516,63 @@ namespace Galkam.AspNetCore.JsonElementStreaming
             return "";
         }
 
-        
+        protected virtual async Task<int> GetMoreBytesIfNeeded()
+        {
+            var bytesRemaining = (chunkPosition==-1) ? 0 : (bytesInChunk - chunkPosition);
+            if (bytesRemaining > 0) return 0;
+            chunk = new byte[ChunkSize];
+            bytesInChunk = await sourceStream.ReadAsync(chunk, 0, ChunkSize);
+            chunkPosition = (bytesInChunk > 0) ? 0 : -1;
+            return bytesInChunk;
+        }
+
+        protected virtual async Task<Enums.StreamerStatus> Flush()
+        {
+
+            if (chunkPosition == -1)
+            {
+                chunkPosition = 0;
+                await GetMoreBytesIfNeeded();
+            }
+            var bytesRemaining = (bytesInChunk - chunkPosition);
+            while (bytesRemaining > 0 )
+            {
+                await NextChunkToStream(chunkPosition, bytesRemaining-1);
+                chunkPosition = bytesInChunk;
+                bytesRemaining = await GetMoreBytesIfNeeded();
+            }
+            status = Enums.StreamerStatus.Complete;
+            return Status;
+        }
+
 
         public async Task<Enums.StreamerStatus> Next()
         {
-            var newChunk = new byte[ChunkSize];
-            if (chunk == null) chunk = new byte[ChunkSize];
-
-            //Copy the remaining bytes from the exisitng chunk into the new chunk
-            var bytesRemaining = (bytesInChunk - chunkPosition);
-            if (chunkPosition >= 0)
+            if (chunk == null)
             {
-                if (bytesRemaining > 0)
-                {
-                    Array.Copy(chunk, chunkPosition, newChunk, 0, bytesRemaining);
-                }
-                bytesInChunk = bytesRemaining;
-                chunk = newChunk;
+//                chunk = new byte[ChunkSize];
+                chunkPosition = -1;
+                bytesInChunk = 0;
+            }
+            if (!AlwaysStopOnNextData && 
+                (Status == Enums.StreamerStatus.Searching || Status == Enums.StreamerStatus.None)
+                && IsComplete())
+            {
+                status = Enums.StreamerStatus.Flushing;
+                await Flush();
             }
             else
             {
-                bytesRemaining = 0;
+                var bytesRead = await GetMoreBytesIfNeeded();
+                //TODO : ADD CANCELLATION TOKEN for the async read.
+                if (bytesInChunk > 0) await ProcessChunk();
+                var bytesRemaining = (bytesInChunk - chunkPosition);
+                if (bytesRemaining < 1)
+                {
+                    bytesRead = await GetMoreBytesIfNeeded();
+                    if (bytesRead == 0) status = Enums.StreamerStatus.Complete;
+                }
             }
-            chunkPosition = 0;
-            var maxBytesToRead = ChunkSize - bytesRemaining;
-            //TODO : ADD CANCELLATION TOKEN for the async read.
-            var chunkSize = await sourceStream.ReadAsync(chunk,ChunkSize-maxBytesToRead, maxBytesToRead);
-            bytesInChunk = bytesInChunk + chunkSize;
-            if (bytesInChunk>0) await ProcessChunk();
-            bytesRemaining = (bytesInChunk - chunkPosition);
-            if (chunkSize == 0 && bytesRemaining<1 ) status = Enums.StreamerStatus.Complete;
-
             return Status;
         }
 
