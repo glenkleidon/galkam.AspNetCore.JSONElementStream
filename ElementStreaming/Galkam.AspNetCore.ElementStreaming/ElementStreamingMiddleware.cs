@@ -20,14 +20,7 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         public async Task Invoke(HttpContext context)
         {
-            if (
-                context.Request.Method.ToLower().Equals(HttpMethods.Get.ToLower()) ||
-                !context.Request.ContentType.ToLower().Contains("json") ||
-                !streamContext.EndPoints.Any(
-                    p => p.StartsWith(context.Request.Path) ||
-                         p.StartsWith(context.Request.PathBase)
-                    ) 
-               )
+            if (!streamContext.IsTargetRequest(context))
             {
                 await next.Invoke(context);
             }
@@ -39,19 +32,18 @@ namespace Galkam.AspNetCore.ElementStreaming
                     var JsonStreamer = new JsonElementStreamer(context.Request.Body, incomingStream, streamContext.Elements);
                     try
                     {
-
-                        do
+                        do 
                         {
                             await JsonStreamer.Next();
-                        } while (JsonStreamer.Status != Enums.StreamerStatus.Complete);
-
+                            if (json)
+                        }
+                        while (JsonStreamer.Status != Enums.StreamerStatus.Complete);
                     }
                     finally
                     {
                         context.Request.Body.Dispose();
                         context.Request.Body = incomingStream;
                     }
-                    
                     await next.Invoke(context);
                 }
                 finally

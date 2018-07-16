@@ -12,7 +12,7 @@ namespace Galkam.AspNetCore.ElementStreaming
     /// <summary>
     /// Accepts a Stream which will extract JSON elements into a stream 
     /// </summary>
-    public class JsonElementStreamer
+    public class JsonElementStreamer : IElementStreamer
     {
         private readonly Stream sourceStream;
         private readonly Stream outStream;
@@ -132,6 +132,9 @@ namespace Galkam.AspNetCore.ElementStreaming
             //now locate the end of the data.
         }
         public bool StreamIsValid { get => goodJson; }
+
+        public string ElementPath => throw new NotImplementedException();
+
         private void BadJson()
         {
             goodJson = false;
@@ -617,6 +620,14 @@ namespace Galkam.AspNetCore.ElementStreaming
             return Status;
         }
 
+        public async virtual Task StartOfElementData()
+        {
+            await Task.CompletedTask;
+        }
 
+        public async virtual Task EndOfData()
+        {
+            await Task.CompletedTask;
+        }
     }
 }
