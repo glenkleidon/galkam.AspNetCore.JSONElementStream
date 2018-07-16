@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Galkam.AspNetCore.JsonElementStreaming.Writers
+namespace Galkam.AspNetCore.ElementStreaming.Writers
 
 {
     public abstract class BaseValueStreamWriter : IElementStreamWriter, IValueStreamWriter

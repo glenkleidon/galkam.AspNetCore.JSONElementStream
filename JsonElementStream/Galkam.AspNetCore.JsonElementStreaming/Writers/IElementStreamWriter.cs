@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 
-namespace Galkam.AspNetCore.JsonElementStreaming.Writers
+namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
     public interface IElementStreamWriter
     {

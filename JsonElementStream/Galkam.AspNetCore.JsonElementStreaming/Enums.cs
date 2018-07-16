@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.ElementStreaming
 {
     public static class Enums
     {

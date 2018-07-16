@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Galkam.AspNetCore.JsonElementStreaming.Writers;
+using Galkam.AspNetCore.ElementStreaming.Writers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UnitTestJsonElementStreaming

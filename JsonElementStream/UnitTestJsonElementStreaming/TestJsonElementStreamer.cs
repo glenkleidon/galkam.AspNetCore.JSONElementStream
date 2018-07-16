@@ -1,11 +1,11 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Galkam.AspNetCore.JsonElementStreaming;
+using Galkam.AspNetCore.ElementStreaming;
 using System.IO;
 using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Galkam.AspNetCore.JsonElementStreaming.Writers;
+using Galkam.AspNetCore.ElementStreaming.Writers;
 
 namespace UnitTestJsonElementStreaming
 {

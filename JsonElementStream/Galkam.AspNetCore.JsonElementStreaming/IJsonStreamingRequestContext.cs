@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Galkam.AspNetCore.JsonElementStreaming.Writers;
+using Galkam.AspNetCore.ElementStreaming.Writers;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.ElementStreaming
 {
     public interface IJsonStreamingRequestContext
     {

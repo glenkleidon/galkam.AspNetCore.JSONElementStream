@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
-using Galkam.AspNetCore.JsonElementStreaming.Writers;
+using Galkam.AspNetCore.ElementStreaming.Writers;
 using Newtonsoft.Json;
 using System.Linq;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.ElementStreaming
 {
     /// <summary>
     /// Accepts a Stream which will extract JSON elements into a stream 

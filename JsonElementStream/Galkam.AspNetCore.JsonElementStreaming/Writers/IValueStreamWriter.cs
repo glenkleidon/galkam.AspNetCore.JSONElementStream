@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Galkam.AspNetCore.JsonElementStreaming.Writers
+namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
     public interface IValueStreamWriter
     {

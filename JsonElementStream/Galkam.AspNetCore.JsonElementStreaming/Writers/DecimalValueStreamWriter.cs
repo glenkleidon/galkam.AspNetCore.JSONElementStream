@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Galkam.AspNetCore.JsonElementStreaming.Writers
+namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
     public class DecimalValueStreamWriter: BaseValueStreamWriter
     {

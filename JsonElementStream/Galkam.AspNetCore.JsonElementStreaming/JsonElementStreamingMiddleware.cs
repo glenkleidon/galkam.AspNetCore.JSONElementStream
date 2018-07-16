@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using System.Linq;
 
-namespace Galkam.AspNetCore.JsonElementStreaming
+namespace Galkam.AspNetCore.ElementStreaming
 {
     public class JsonElementStreamingMiddleware
     {
