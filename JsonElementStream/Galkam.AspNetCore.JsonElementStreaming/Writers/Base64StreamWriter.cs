@@ -39,7 +39,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
         public async Task<int> WriteString(string text)
         {
             var textToWrite = unwritten + text;
-            var charsToWrite = (int) (textToWrite.Length/4);
+            var charsToWrite = 4*((int) (textToWrite.Length/4));
             var newChars = Convert.FromBase64String(textToWrite.Substring(0, charsToWrite));
             unwritten = (charsToWrite < textToWrite.Length) ? textToWrite.Substring(charsToWrite) : "";
             await outStream.WriteAsync(newChars,0, newChars.Length);
@@ -83,7 +83,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming.Writers
             var unwrittenSize = (count - newCount);
             if (unwrittenSize>0)
             {
-                unwritten = new string(buffer, count-unwrittenSize-1, unwrittenSize);
+                unwritten = new string(buffer, count-unwrittenSize, unwrittenSize);
             }
             await outStream.WriteAsync(newBytes, 0, newBytes.Length);
             return charsToWrite;

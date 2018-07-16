@@ -493,7 +493,7 @@ namespace UnitTestJsonElementStreaming
             var encodeTestData = "MTIzNDU2Nzg5";
 
             var json = Encoding.ASCII.GetBytes(encodeTestData); // 
-            while ((TestStream.Length-header.Length) < testStreamer.ChunkSize) TestStream.Write(json);
+            while ((TestStream.Length-header.Length) < (2*testStreamer.ChunkSize)) TestStream.Write(json);
             TestStream.Write(Encoding.ASCII.GetBytes(tail));
             TestStream.Position = 0;
 
