@@ -3,46 +3,61 @@ using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 using System.IO;
 using System.Text;
+using System.Linq;
 
 namespace Galkam.AspNetCore.JsonElementStreaming
 {
     public class JsonElementStreamingMiddleware
     {
-        private readonly RequestDelegate _next;
+        private readonly IJsonStreamingRequestContext streamContext;
+        private readonly RequestDelegate next;
 
-        public JsonElementStreamingMiddleware(RequestDelegate next)
+        public JsonElementStreamingMiddleware(RequestDelegate next, IJsonStreamingRequestContext streamContext)
         {
-            _next = next;
+            this.streamContext = streamContext;
+            this.next = next;
         }
 
         public async Task Invoke(HttpContext context)
         {
-            var IncomingRequestStream = new MemoryStream();
-
-            try
+            if (
+                context.Request.Method.ToLower().Equals(HttpMethods.Get.ToLower()) ||
+                !context.Request.ContentType.ToLower().Contains("json") ||
+                !streamContext.EndPoints.Any(
+                    p => p.StartsWith(context.Request.Path) ||
+                         p.StartsWith(context.Request.PathBase)
+                    ) 
+               )
             {
-                var requestLog =
-                $"REQUEST HttpMethod: {context.Request.Method}, Path: {context.Request.Path}";
-
-                using (var bodyReader = new StreamReader(context.Request.Body))
-                {
-                    var bodyAsText = bodyReader.ReadToEnd();
-                    if (string.IsNullOrWhiteSpace(bodyAsText) == false)
-                    {
-                        requestLog += $", Body : {bodyAsText}";
-                    }
-
-                    var bytesToWrite = Encoding.UTF8.GetBytes(bodyAsText);
-                    IncomingRequestStream.Write(bytesToWrite, 0, bytesToWrite.Length);
-                    IncomingRequestStream.Seek(0, SeekOrigin.Begin);
-                    context.Request.Body = IncomingRequestStream;
-                }
-
-                await _next.Invoke(context);
+                await next.Invoke(context);
             }
-            finally
+            else
             {
-                IncomingRequestStream.Dispose();
+                var incomingStream = new MemoryStream();
+                try
+                {
+                    var JsonStreamer = new JsonElementStreamer(context.Request.Body, incomingStream, streamContext.Elements);
+                    try
+                    {
+
+                        do
+                        {
+                            await JsonStreamer.Next();
+                        } while (JsonStreamer.Status != Enums.StreamerStatus.Complete);
+
+                    }
+                    finally
+                    {
+                        context.Request.Body.Dispose();
+                        context.Request.Body = incomingStream;
+                    }
+                    
+                    await next.Invoke(context);
+                }
+                finally
+                {
+                    incomingStream.Dispose();
+                }
             }
         }
     }

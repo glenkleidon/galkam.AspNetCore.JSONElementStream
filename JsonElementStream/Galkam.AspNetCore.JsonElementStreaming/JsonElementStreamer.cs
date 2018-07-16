@@ -55,7 +55,7 @@ namespace Galkam.AspNetCore.JsonElementStreaming
         public bool AlwaysStopOnNextData { get; set; } = false;
         public Enums.StreamerStatus Status { get { return status; } }
         public Enums.JsonStatus JsonStatus { get { return jsonStatus.Peek(); }  }
-        public int ChunkSize { get; set; } = 5000;
+        public int ChunkSize { get; set; } = 4096;
         public string JsonPath { get { return elementStack.Peek(); } }
         public virtual bool IsComplete() {
             return !StreamIsValid || elements.All(e => e.Value.IsComplete);

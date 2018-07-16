@@ -27,15 +27,24 @@ namespace UnitTestJsonElementStreaming
         [TestMethod]
         public async Task All_Paths_are_detected_correctly()
         {
-            var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
-            elements.Add("$.dummy", new Base64StreamWriter(new MemoryStream()));
-            testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
-            testStreamer.AlwaysStopOnNextData = true;
-            foreach (var p in Constants.JsonPaths)
+            using (var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON)))
             {
-                await testStreamer.Next();
-                Assert.AreEqual(p, testStreamer.JsonPath , $"Faulted at {p} with {testStreamer.JsonPath}");
-                Console.WriteLine(p);
+                elements.Add("$.dummy", new Base64StreamWriter(new MemoryStream()));
+                try
+                {
+                    testStreamer = new JsonElementStreamer(TestStream, outStream, elements);
+                    testStreamer.AlwaysStopOnNextData = true;
+                    foreach (var p in Constants.JsonPaths)
+                    {
+                        await testStreamer.Next();
+                        Assert.AreEqual(p, testStreamer.JsonPath, $"Faulted at {p} with {testStreamer.JsonPath}");
+                        Console.WriteLine(p);
+                    }
+                }
+                finally
+                {
+                    elements["$.dummy"].OutStream.Dispose();
+                }
             }
         }
 
