@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2026
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "JsonElementStream", "JsonElementStream\JsonElementStream.csproj", "{7DDEF05C-8AA1-4DAC-A9E0-88AF9C1ADBD4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ElementStreaming", "ElementStreaming\ElementStreaming.csproj", "{7DDEF05C-8AA1-4DAC-A9E0-88AF9C1ADBD4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Galkam.AspNetCore.ElementStreaming", "Galkam.AspNetCore.JsonElementStreaming\Galkam.AspNetCore.ElementStreaming.csproj", "{2E4545C9-F940-4ECD-849E-025C72C5949D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Galkam.AspNetCore.ElementStreaming", "Galkam.AspNetCore.ElementStreaming\Galkam.AspNetCore.ElementStreaming.csproj", "{2E4545C9-F940-4ECD-849E-025C72C5949D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTestJsonElementStreaming", "UnitTestJsonElementStreaming\UnitTestJsonElementStreaming.csproj", "{FBE1D50A-3E1F-4E1C-B6FA-E0FD4BCB544D}"
 EndProject

@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Galkam.AspNetCore.JsonElementStreaming\Galkam.AspNetCore.ElementStreaming.csproj" />
+    <ProjectReference Include="..\Galkam.AspNetCore.ElementStreaming\Galkam.AspNetCore.ElementStreaming.csproj" />
   </ItemGroup>
 
 </Project>
