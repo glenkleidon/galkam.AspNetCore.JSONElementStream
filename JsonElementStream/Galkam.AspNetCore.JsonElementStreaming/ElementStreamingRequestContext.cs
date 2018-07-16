@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Galkam.AspNetCore.ElementStreaming
 {
-    public class JsonStreamingRequestContext : IJsonStreamingRequestContext
+    public class ElementStreamingRequestContext : IElementStreamingRequestContext
     {
         public Dictionary<string, IElementStreamWriter> Elements { get; set; } = new Dictionary<string, IElementStreamWriter>();
         public List<string> EndPoints { get; set; } = new List<string>();

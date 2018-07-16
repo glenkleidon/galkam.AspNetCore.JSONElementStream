@@ -13,11 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Galkam.AspNetCore.JsonElementStreaming\Galkam.AspNetCore.JsonElementStreaming.csproj" />
+    <Folder Include="json\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="json\" />
+    <ProjectReference Include="..\Galkam.AspNetCore.JsonElementStreaming\Galkam.AspNetCore.ElementStreaming.csproj" />
   </ItemGroup>
 
 </Project>

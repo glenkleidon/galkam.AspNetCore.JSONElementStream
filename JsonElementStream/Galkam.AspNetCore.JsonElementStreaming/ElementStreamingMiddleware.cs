@@ -7,12 +7,12 @@ using System.Linq;
 
 namespace Galkam.AspNetCore.ElementStreaming
 {
-    public class JsonElementStreamingMiddleware
+    public class ElementStreamingMiddleware
     {
-        private readonly IJsonStreamingRequestContext streamContext;
+        private readonly IElementStreamingRequestContext streamContext;
         private readonly RequestDelegate next;
 
-        public JsonElementStreamingMiddleware(RequestDelegate next, IJsonStreamingRequestContext streamContext)
+        public ElementStreamingMiddleware(RequestDelegate next, IElementStreamingRequestContext streamContext)
         {
             this.streamContext = streamContext;
             this.next = next;
