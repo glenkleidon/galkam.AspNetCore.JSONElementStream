@@ -20,23 +20,30 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         public async Task Invoke(HttpContext context)
         {
-            if (!streamContext.IsTargetRequest(context))
+            if (!streamContext.CanHandleRequest(context))
             {
                 await next.Invoke(context);
             }
             else
             {
-                var incomingStream = new MemoryStream();
-                try
+                using (var incomingStream = new MemoryStream())
                 {
                     var JsonStreamer = new JsonElementStreamer(context.Request.Body, incomingStream, streamContext.Elements);
                     try
                     {
-                        do 
+                        do
                         {
                             await JsonStreamer.Next();
-                            if (json)
-                        }
+                            switch (JsonStreamer.Status)
+                            {
+                                case Enums.StreamerStatus.StartOfData:
+                                    streamContext.DataLocatedHandler();
+                                    break;
+                                case Enums.StreamerStatus.EndOfData:
+                                    streamContext.DataEndedHandler();
+                                    break;
+                            }
+                    }
                         while (JsonStreamer.Status != Enums.StreamerStatus.Complete);
                     }
                     finally
@@ -45,10 +52,6 @@ namespace Galkam.AspNetCore.ElementStreaming
                         context.Request.Body = incomingStream;
                     }
                     await next.Invoke(context);
-                }
-                finally
-                {
-                    incomingStream.Dispose();
                 }
             }
         }
