@@ -6,7 +6,7 @@ namespace Galkam.AspNetCore.ElementStreaming
 {
     public interface IElementStreamingRequestContext
     {
-        Dictionary<string, IElementStreamWriter> Elements { get; set; }
+        StreamedElements Elements { get; set; }
         List<string> EndPoints { get; set; }
         List<string> ContentTypes { get; set; }
         IElementStreamer Streamer { get; set; }

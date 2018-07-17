@@ -14,13 +14,13 @@ namespace UnitTestJsonElementStreaming
     {
         private JsonElementStreamer testStreamer;
         private Stream outStream;
-        private Dictionary<string, IElementStreamWriter> elements;
+        private StreamedElements elements;
 
         [TestInitialize]
         public void Setup()
         {
             outStream = new MemoryStream();
-            elements = new Dictionary<string, IElementStreamWriter>();
+            elements = new StreamedElements();
             testStreamer = null;
         }
 

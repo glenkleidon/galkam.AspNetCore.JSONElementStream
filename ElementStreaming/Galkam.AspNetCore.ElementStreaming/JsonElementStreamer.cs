@@ -16,7 +16,7 @@ namespace Galkam.AspNetCore.ElementStreaming
     {
         private readonly Stream sourceStream;
         private readonly Stream outStream;
-        private readonly Dictionary<string, IElementStreamWriter> elements;
+        private readonly StreamedElements elements;
 
         private string currentStreamPath = String.Empty;
         private Stack<string> elementStack = new Stack<string>();
@@ -44,7 +44,7 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         public bool FlushComplete { get; set; } = false;
 
-        public JsonElementStreamer(Stream sourceStream, Stream outStream, Dictionary<string, IElementStreamWriter> elements)
+        public JsonElementStreamer(Stream sourceStream, Stream outStream, StreamedElements elements)
         {
             this.sourceStream = sourceStream;
             this.outStream = outStream;

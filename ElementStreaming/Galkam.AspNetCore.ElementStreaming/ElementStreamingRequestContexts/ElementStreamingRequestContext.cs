@@ -19,7 +19,7 @@ namespace Galkam.AspNetCore.ElementStreaming
             InitWithEmptyValues();
         }
         public ElementStreamingRequestContext(List<string> endPoints, 
-                   List<string> contentTypes, Dictionary<string, IElementStreamWriter> elements,
+                   List<string> contentTypes, StreamedElements elements,
                    IElementStreamer elementStreamer)
         {
             streamer = elementStreamer;
@@ -30,7 +30,7 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         private void InitWithEmptyValues()
         {
-            Elements  = new Dictionary<string, IElementStreamWriter>();
+            Elements  = new StreamedElements();
             EndPoints = new List<string>();
             ContentTypes= new List<string>();
         }
@@ -39,7 +39,7 @@ namespace Galkam.AspNetCore.ElementStreaming
         {
             Streamer = streamer;
         }
-        public Dictionary<string, IElementStreamWriter> Elements { get; set; }
+        public StreamedElements Elements { get; set; }
         public List<string> EndPoints { get; set; } 
         public List<string> ContentTypes { get; set; } 
         public IElementStreamer Streamer { get => streamer; set { streamer = value; }  }

@@ -9,16 +9,14 @@ namespace Galkam.AspNetCore.ElementStreaming
 {
     public class ElementStreamingMiddleware
     {
-        private readonly IElementStreamingRequestContext streamContext;
         private readonly RequestDelegate next;
 
-        public ElementStreamingMiddleware(RequestDelegate next, IElementStreamingRequestContext streamContext)
+        public ElementStreamingMiddleware(RequestDelegate next)
         {
-            this.streamContext = streamContext;
             this.next = next;
         }
 
-        public async Task Invoke(HttpContext context)
+        public async Task Invoke(HttpContext context, IElementStreamingRequestContext streamContext)
         {
             if (!streamContext.CanHandleRequest(context))
             {
