@@ -52,9 +52,10 @@ namespace Galkam.AspNetCore.ElementStreaming
                 ContentTypes.Any(
                      c => c.ToLower().Equals(context.Request.ContentType.ToLower())) &&
                 // The path indicates one of the specified endpoints
-                EndPoints.Any(
+                (EndPoints.Count==0 || EndPoints.Any(
                    p => p.StartsWith(context.Request.Path) ||
-                        p.StartsWith(context.Request.PathBase));
+                        p.StartsWith(context.Request.PathBase))
+                        );
         }
         public virtual bool DataLocatedHandler()
         {
