@@ -8,13 +8,68 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
     /// <summary>
     /// A binary writer for decoding base64 data to a stream.
+    /// Note: Calling Dispose is only necessary an external memory stream has not been assigned.
     /// </summary>
-    public class Base64StreamWriter : IElementStreamWriter
+    public class Base64StreamWriter : IElementStreamWriter, IDisposable
     {
+        private bool ownsOutStream = false;
+        private bool disposed;
+
         private Stream outStream;
         private string unwritten = "";
+        /// <summary>
+        /// Ensures potentially owned Memory stream is destoryed as expected.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+        private void ReleaseStream()
+        {
+            if (ownsOutStream)
+            {
+                ownsOutStream = false;
+                outStream.Dispose();
+            }
+               
+        }
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposed)
+            {
+                if (disposing)
+                {
+                    if (ownsOutStream)
+                    {
+                        ReleaseStream();
+                    }
+                    disposed = true;
+                }
+            }
+        }
+        ~Base64StreamWriter()
+        {
+            Dispose(false);
+        }
 
-        public Stream OutStream { get => outStream; set => value = outStream; }
+        public Stream OutStream
+        {
+            get
+            {
+                if (outStream == null)
+                {
+                    outStream = new MemoryStream();
+                    ownsOutStream = true;
+                }
+                return outStream;
+            }
+            set
+            {
+                if (ownsOutStream) ReleaseStream();
+                value = outStream;
+            }
+        }
 
         public IValueStreamWriter TypedValue => throw new NotImplementedException();
 

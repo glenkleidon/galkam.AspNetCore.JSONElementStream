@@ -162,8 +162,8 @@ namespace UnitTestJsonElementStreaming
         }
         private async Task DoTwoBase64Strings(JsonElementStreamer testStreamer)
         {
-            elements.Add("$.Complex.Object1.ElementBase64", new Base64StreamWriter(new MemoryStream()));
-            elements.Add("$.ArrayOfComplexObjects[1].CO2.string", new Base64StreamWriter(new MemoryStream()));
+            elements.Add("$.Complex.Object1.ElementBase64", new Base64StreamWriter());
+            elements.Add("$.ArrayOfComplexObjects[1].CO2.string", new Base64StreamWriter());
 
             // Locate the Element
             var c = 0;
@@ -193,10 +193,18 @@ namespace UnitTestJsonElementStreaming
             c = 0;
             await testStreamer.Next();
             while (c++ < 5 && testStreamer.Status == Enums.StreamerStatus.Streaming) await testStreamer.Next();
+
+            // properly managing the IDisposable streams and reader
             var b64Stream2 = elements["$.ArrayOfComplexObjects[1].CO2.string"].OutStream;
             Assert.IsNotNull(b64Stream2);
             b64Stream2.Position = 0;
-            var element2StreamContent = new StreamReader(b64Stream2).ReadToEnd();
+            string element2StreamContent;
+            using (var reader = new StreamReader(b64Stream2))
+            {
+                element2StreamContent = await reader.ReadToEndAsync();
+                b64Stream2.Dispose();
+            }                
+
             Assert.IsTrue(element2StreamContent.Length > 0);
 
             // Read to End
