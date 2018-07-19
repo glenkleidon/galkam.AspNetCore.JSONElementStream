@@ -32,7 +32,6 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
                 ownsOutStream = false;
                 outStream.Dispose();
             }
-               
         }
         protected virtual void Dispose(bool disposing)
         {

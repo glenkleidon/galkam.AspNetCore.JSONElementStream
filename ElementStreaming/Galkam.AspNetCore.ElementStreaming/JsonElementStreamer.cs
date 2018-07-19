@@ -43,6 +43,12 @@ namespace Galkam.AspNetCore.ElementStreaming
         private Enums.StreamerStatus status;
 
         public bool FlushComplete { get; set; } = false;
+        public JsonElementStreamer()
+        {
+            this.sourceStream = sourceStream;
+            this.outStream = outStream;
+            this.elements = elements;
+            this.status = Enums.StreamerStatus.None;        }
 
         public JsonElementStreamer(Stream sourceStream, Stream outStream, StreamedElements elements)
         {
