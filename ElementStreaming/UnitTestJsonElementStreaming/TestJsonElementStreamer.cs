@@ -186,7 +186,7 @@ namespace UnitTestJsonElementStreaming
         }
 
      //   [TestMethod]
-        public async Task ElementStreamer_Optimizer_skips_whole_Object()
+        public void ElementStreamer_Optimizer_skips_whole_Object()
         {
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             elements.Add("$.Complex.Object1", new Base64StreamWriter(new MemoryStream()));
@@ -194,7 +194,7 @@ namespace UnitTestJsonElementStreaming
             throw new NotImplementedException("Optimizer is not implemented as yet.");
         }
       //  [TestMethod]
-        public async Task ElementStreamer_Optimizer_skips_whole_Array()
+        public void ElementStreamer_Optimizer_skips_whole_Array()
         {
             var TestStream = new MemoryStream(Encoding.ASCII.GetBytes(Constants.TestJSON));
             elements.Add("$.Complex.Object1", new Base64StreamWriter(new MemoryStream()));

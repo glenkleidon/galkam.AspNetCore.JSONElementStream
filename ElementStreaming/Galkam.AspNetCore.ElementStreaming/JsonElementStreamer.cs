@@ -40,22 +40,19 @@ namespace Galkam.AspNetCore.ElementStreaming
         private const byte Comma = 0x2C;
         private const byte BackSlash = 0x5C;
 
-        private Enums.StreamerStatus status;
+        private Enums.StreamerStatus status { get; set; } = Enums.StreamerStatus.None;
 
         public bool FlushComplete { get; set; } = false;
-        public JsonElementStreamer()
+        public JsonElementStreamer(StreamedElements elements)
         {
-            this.sourceStream = sourceStream;
-            this.outStream = outStream;
             this.elements = elements;
-            this.status = Enums.StreamerStatus.None;        }
+        }
 
         public JsonElementStreamer(Stream sourceStream, Stream outStream, StreamedElements elements)
         {
             this.sourceStream = sourceStream;
             this.outStream = outStream;
             this.elements = elements;
-            this.status = Enums.StreamerStatus.None;
         }
 
         public bool AlwaysStopOnNextData { get; set; } = false;

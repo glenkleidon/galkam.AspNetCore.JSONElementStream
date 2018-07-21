@@ -2,6 +2,7 @@
 using Galkam.AspNetCore.ElementStreaming.Writers;
 using Microsoft.AspNetCore.Http;
 
+
 namespace Galkam.AspNetCore.ElementStreaming
 {
     public interface IElementStreamingRequestContext
@@ -11,8 +12,7 @@ namespace Galkam.AspNetCore.ElementStreaming
         List<string> ContentTypes { get; set; }
         IElementStreamer Streamer { get; set; }
         bool CanHandleRequest(HttpContext context);
-        bool DataLocatedHandler();
-        bool DataEndedHandler();
-
+        bool ElementFoundHandler();
+        bool ElementCompleteHandler();
     }
 }

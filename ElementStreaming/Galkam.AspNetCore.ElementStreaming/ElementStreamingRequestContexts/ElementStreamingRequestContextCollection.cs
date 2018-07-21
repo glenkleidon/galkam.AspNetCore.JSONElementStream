@@ -20,5 +20,6 @@ namespace Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts
         {
             return ElementStreamingRequestContexts.Where(r => r.CanHandleRequest(context)).First();
         }
+
     }
 }

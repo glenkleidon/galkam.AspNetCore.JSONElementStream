@@ -9,6 +9,16 @@ namespace Galkam.AspNetCore.ElementStreaming
     {
         public StreamedElements() : base() {}
         public StreamedElements(int capacity) : base(capacity) {}
+        public void DiscardElement(string key)
+        {
+            var element = this[key];
+            if (element != null)
+            {
+                Remove(key);
+                element.Dispose();
+            }
+
+        }
         
     }
 }

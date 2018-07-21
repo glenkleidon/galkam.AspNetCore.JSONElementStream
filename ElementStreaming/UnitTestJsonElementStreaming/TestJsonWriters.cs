@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Galkam.AspNetCore.ElementStreaming.Writers;
@@ -11,15 +12,15 @@ namespace UnitTestJsonElementStreaming
     public class TestJsonWriters
     {
 
-    [TestInitialize]
+        [TestInitialize]
         public void Setup()
         {
 
         }
-    private byte[] TestNumbersBytes { get => new byte[] { 49, 50, 51, 52, 53, 54, 55, 56, 57, 48 }; }
+        private byte[] TestNumbersBytes { get => new byte[] { 49, 50, 51, 52, 53, 54, 55, 56, 57, 48 }; }
 
-    [TestMethod]
-        public async Task TextWriter_stores_as_stream_as_string()
+        [TestMethod]
+        public async Task StringWriter_stores_as_stream_as_string()
         {
             var writer = new StringValueStreamWriter();
             Assert.IsNull(writer.AsString());
@@ -28,6 +29,38 @@ namespace UnitTestJsonElementStreaming
             await writer.WriteString(Constants.TestMessage);
             Assert.AreEqual($"{Constants.TestNumbers}{Constants.TestMessage}", writer.Value);
         }
+
+        [TestMethod]
+        public void StringWriter_returns_default_value()
+        {
+            var writer = new StringValueStreamWriter(Constants.TestMessage);
+            Assert.IsNotNull(writer.AsString());
+            Assert.AreEqual(Constants.TestMessage, writer.AsString());
+            Assert.AreEqual(Constants.TestMessage, writer.Value);
+        }
+        [TestMethod]
+        public async Task Base64FileWriter_stores_as_stream_in_a_file()
+        {
+            using (var writer = new Base64ToTempFileWriter())
+            {
+                writer.Filename = "unittest.txt";
+                await writer.WriteString(Constants.TestMessageB64_2);
+                writer.OutStream.Close();
+                var filename = writer.TypedValue.AsString();
+                Assert.AreEqual(writer.FullFilePath(), filename);
+                //check that the prefix is present in the filename
+                Assert.IsTrue(filename.Contains(writer.Filename),"Filename not present");
+                Assert.IsTrue(filename.Contains(writer.Basefilepath), "base Path not present");
+                Assert.IsTrue(filename.Contains(writer.TemporarySubFolder), "Temporary sub folder not present");
+                var filenameWithoutPrefix = Path.Combine(writer.Basefilepath, $"{writer.TemporarySubFolder}{writer.Filename}");
+                Assert.AreNotEqual(filenameWithoutPrefix,filename);
+                Assert.IsNotNull(filename);
+                Assert.IsTrue(File.Exists(filename), "File does not exist");
+                Assert.AreEqual(Constants.TestMessage2,File.ReadAllText(filename));
+                File.Delete(filename);
+            }
+        }
+
 
         [TestMethod]
         public async Task IntegerWriter_stores_as_stream_as_integer()

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text;
 using System.Linq;
+using Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts;
 
 namespace Galkam.AspNetCore.ElementStreaming
 {
@@ -16,9 +17,10 @@ namespace Galkam.AspNetCore.ElementStreaming
             this.next = next;
         }
 
-        public async Task Invoke(HttpContext context, IElementStreamingRequestContext streamContext)
+        public async Task Invoke(HttpContext context, IElementStreamingRequestContextCollection streamContext)
         {
-            if (!streamContext.CanHandleRequest(context))
+            var handler = streamContext.GetRequestHandler(context);
+            if (handler!=null)
             {
                 await next.Invoke(context);
             }
@@ -26,7 +28,7 @@ namespace Galkam.AspNetCore.ElementStreaming
             {
                 using (var incomingStream = new MemoryStream())
                 {
-                    var JsonStreamer = new JsonElementStreamer(context.Request.Body, incomingStream, streamContext.Elements);
+                    var JsonStreamer = handler.Streamer;
                     try
                     {
                         do
@@ -35,10 +37,10 @@ namespace Galkam.AspNetCore.ElementStreaming
                             switch (JsonStreamer.Status)
                             {
                                 case Enums.StreamerStatus.StartOfData:
-                                    streamContext.DataLocatedHandler();
+                                    handler.ElementFoundHandler();
                                     break;
                                 case Enums.StreamerStatus.EndOfData:
-                                    streamContext.DataEndedHandler();
+                                    handler.ElementCompleteHandler();
                                     break;
                             }
                     }

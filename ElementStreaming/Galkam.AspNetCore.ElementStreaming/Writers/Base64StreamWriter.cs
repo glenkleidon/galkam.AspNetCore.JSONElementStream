@@ -4,16 +4,17 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
     /// <summary>
     /// A binary writer for decoding base64 data to a stream.
     /// Note: Calling Dispose is only necessary an external memory stream has not been assigned.
     /// </summary>
-    public class Base64StreamWriter : IElementStreamWriter, IDisposable
+    public class Base64StreamWriter : IElementStreamWriter
     {
-        private bool ownsOutStream = false;
-        private bool disposed;
+        protected bool ownsOutStream = false;
+        protected bool disposed;
 
         private Stream outStream;
         private string unwritten = "";
@@ -25,7 +26,7 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        private void ReleaseStream()
+        public virtual void ReleaseStream()
         {
             if (ownsOutStream)
             {
@@ -52,7 +53,7 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
             Dispose(false);
         }
 
-        public Stream OutStream
+        public virtual Stream OutStream
         {
             get
             {
@@ -65,12 +66,12 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
             }
             set
             {
-                if (ownsOutStream) ReleaseStream();
+                ReleaseStream();
                 value = outStream;
             }
         }
 
-        public IValueStreamWriter TypedValue => throw new NotImplementedException();
+        public virtual IValueStreamWriter TypedValue => throw new NotImplementedException();
 
         public virtual bool CanIntercept => true;
 
@@ -79,9 +80,9 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
 
         public Base64StreamWriter()
         {
-            this.outStream = outStream = new MemoryStream();
+            this.outStream = null;
         }
-        public Base64StreamWriter(Stream outStream) 
+        public Base64StreamWriter(Stream outStream)
         {
             this.outStream = outStream;
         }
@@ -93,10 +94,10 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         public async Task<int> WriteString(string text)
         {
             var textToWrite = unwritten + text;
-            var charsToWrite = 4*((int) (textToWrite.Length/4));
+            var charsToWrite = 4 * ((int)(textToWrite.Length / 4));
             var newChars = Convert.FromBase64String(textToWrite.Substring(0, charsToWrite));
             unwritten = (charsToWrite < textToWrite.Length) ? textToWrite.Substring(charsToWrite) : "";
-            await outStream.WriteAsync(newChars,0, newChars.Length);
+            await OutStream.WriteAsync(newChars, 0, newChars.Length);
             return charsToWrite;
         }
         /// <summary>
@@ -122,7 +123,7 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         public async Task<int> Write(char[] buffer, int offset, int count)
         {
             // must write in multiples of 4.  We need to add any unwritten buffer to the front
-            var charsToWrite = 4*((int)((count + unwritten.Length) / 4));
+            var charsToWrite = 4 * ((int)((count + unwritten.Length) / 4));
             var newChars = new char[charsToWrite];
             var newDataStartPoint = unwritten.Length;
             var newCount = charsToWrite - unwritten.Length;
@@ -135,12 +136,18 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
 
             //keep the unwritten part for next time.
             var unwrittenSize = (count - newCount);
-            if (unwrittenSize>0)
+            if (unwrittenSize > 0)
             {
-                unwritten = new string(buffer, count-unwrittenSize, unwrittenSize);
+                unwritten = new string(buffer, count - unwrittenSize, unwrittenSize);
             }
-            await outStream.WriteAsync(newBytes, 0, newBytes.Length);
+            await OutStream.WriteAsync(newBytes, 0, newBytes.Length);
             return charsToWrite;
         }
+
+        public void Discard()
+        {
+            Dispose();
+        }
+
     }
 }

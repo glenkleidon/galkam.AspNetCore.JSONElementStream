@@ -1,9 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
-    public interface IElementStreamWriter
+    public interface IElementStreamWriter : IDisposable
     {
         Task<int> Write(byte[] buffer, int offset, int count);
         Task<int> Write(char[] buffer, int offset, int count);
@@ -13,5 +14,5 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         bool CanIntercept { get; }
         bool Intercept { get; set; }
         bool IsComplete { get; set; }
-    }
+     }
 }
