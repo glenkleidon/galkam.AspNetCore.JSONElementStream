@@ -45,63 +45,72 @@ namespace JsonElementStream
             // Finally add what we new want to do when we receive data (use a lambda or specific funciton).
             jsonRequestContext.OnElementStarting = s => true; // do nothing for starting
 
-            jsonRequestContext.OnElementCompleted =  s =>
-            {
-                var handled = false;
-                var docElement = s.GetElement(Constants.DocumentJsonPath);
-                if (docElement != null && s.Streamer.ElementPath == Constants.DocumentJsonPath && docElement.IsComplete)
-                {
-                    //Add a new context element indicating the size of the stream.
-                    var sizeElement = new DynamicValueStreamWriter(docElement.OutStream.Length.ToString());
-                    s.Elements.Add(Constants.ByteSizeJsonPath, sizeElement);
+            jsonRequestContext.OnElementCompleted = s =>
+           {
+               var handled = false;
+               var docElement = s.GetElement(Constants.DocumentJsonPath);
+               if (docElement != null && s.Streamer.ElementPath == Constants.DocumentJsonPath && docElement.IsComplete)
+               {
+                   //Add a new context element indicating the size of the stream.
+                   var fileSize = docElement.OutStream.Length;
+                   var tmpFileName = docElement.TypedValue.AsString();
+                   if (fileSize > 0) // check for the null case
+                   {
+                       var sizeElement = new DynamicValueStreamWriter(docElement.OutStream.Length.ToString());
+                       s.Elements.Add(Constants.ByteSizeJsonPath, sizeElement);
 
-                    // substitute the original base64 code with the filename:
-                    var tmpFileName = docElement.TypedValue.AsString();
-                    var newFilenameElement = new DynamicValueStreamWriter(tmpFileName);
-                    s.Elements.Add(Constants.TempFileJsonPath, newFilenameElement);
+                       // substitute the original base64 code with the filename:
+                       var newFilenameElement = new DynamicValueStreamWriter(tmpFileName);
+                       s.Elements.Add(Constants.TempFileJsonPath, newFilenameElement);
 
-                    //warning: this will write synchronously
-                    s.Streamer.WriteAlternateContent(tmpFileName);
+                       //warning: this will write synchronously
+                       s.Streamer.WriteAlternateContent(tmpFileName);
 
-                    // and now get rid of that streamer - as we now have a file reference.
-                    s.Elements.DiscardElement(Constants.DocumentJsonPath);
-                    // was this a file we previously decided to discard?
-                    if (docElement.Ignore)
-                    {
-                        if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
-                    }
-                    handled = true;
-                }
-                else
-                {
-                    // Check for unwanted file types we need to delete or block. 
-                    var fnameElement = s.GetElement(Constants.FilenameJsonPath);
-                    var newFilenameElement = s.GetElement(Constants.TempFileJsonPath);
+                       // and now get rid of that streamer - as we now have a file reference.
+                       s.Elements.DiscardElement(Constants.DocumentJsonPath);
+                   }
+                   else
+                   {
+                       docElement.Ignore = true;
+                       docElement.OutStream.Dispose();
+                   }
+                   // was this a file we previously decided to discard?
+                   if (docElement.Ignore)
+                   {
+                       if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
+                   }
+                   handled = true;
+               }
+               else
+               {
+                   // Check for unwanted file types we need to delete or block. 
+                   var fnameElement = s.GetElement(Constants.FilenameJsonPath);
+                   var newFilenameElement = s.GetElement(Constants.TempFileJsonPath);
 
-                    if (s.Streamer.ElementPath == Constants.FilenameJsonPath && fnameElement.IsComplete)
-                    {
-                        var fname = fnameElement.TypedValue.AsString();
-                        var extn = Path.GetExtension(fname);
-                        var blockedTypes = new List<string>() { ".exe", ".svg", ".dll", ".bat", ".com", ".sh", ".ps1" };
-                        var blockFile = blockedTypes.Any(t => t.ToLower() == extn);
-                        if (docElement != null)
-                        {
-                            // encounterd FileName first - so we can block the file from being written
-                            docElement.Ignore = blockFile;
-                        }
-                        if (newFilenameElement != null)
-                        {
-                            var tmpFileName = newFilenameElement.TypedValue.AsString();
-                            // we have already written it, delete it now.
-                            if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
-                        }
-                        handled = true;
-                    }
-                }
+                   if (s.Streamer.ElementPath == Constants.FilenameJsonPath && fnameElement.IsComplete)
+                   {
+                       var fname = fnameElement.TypedValue.AsString();
+                       var extn = Path.GetExtension(fname);
+                       var blockedTypes = new List<string>() { ".exe", ".svg", ".dll", ".bat", ".com", ".sh", ".ps1" };
+                       var blockFile = blockedTypes.Any(t => t.ToLower() == extn);
+                       if (docElement != null)
+                       {
+                           // encounterd FileName first - so we can block the file from being written
+                           docElement.Ignore = blockFile;
+                       }
+                       if (newFilenameElement != null)
+                       {
+                           var tmpFileName = newFilenameElement.TypedValue.AsString();
+                           // we have already written it, delete it now.
+                           if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
+                       }
+                       handled = true;
+                   }
+               }
 
-                return handled;
+               return handled;
 
-            };
+           };
             this.ElementStreamingRequestContexts.Add(jsonRequestContext);
 
         }

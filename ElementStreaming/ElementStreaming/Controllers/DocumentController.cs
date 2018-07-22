@@ -37,7 +37,9 @@ namespace ElementStreaming.Utilities
                 var invalidFileType = requestContext.GetElement(Constants.DocumentJsonPath)?.Ignore;
                 if (invalidFileType == true)
                 {
-                    return Forbid($"File {request.fileName} is not supported.");
+                    var errorMsg = $"File {request.fileName} is not supported.";
+                    if (request.document == null) errorMsg= "Document cannot be null";
+                    return BadRequest(errorMsg);
                 }
 
                 // Ok it looks like the file was received.  The temporary filename should be in the request now
@@ -75,9 +77,8 @@ namespace ElementStreaming.Utilities
                 else
                 {
                     // ok something went wrong writing the file.
-                    return StatusCode(StatusCodes.Status500InternalServerError,
-                        new { ErrorMsg = $"The uploaded file {request.fileName} could not be written" }
-                    );
+                    var ErrorMsg = $"The uploaded file {request.fileName} could not be written";
+                    return StatusCode(StatusCodes.Status500InternalServerError, ErrorMsg);
                 }
             }
             else return BadRequest(ModelState);
