@@ -12,6 +12,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Galkam.AspNetCore.ElementStreaming;
 using Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
+using Microsoft.AspNetCore.Http;
 
 namespace JsonElementStream
 {
@@ -27,6 +30,7 @@ namespace JsonElementStream
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
             services.AddScoped<IElementStreamingRequestContextCollection, ElementStreamingDemoContexts>();
         }
@@ -42,8 +46,14 @@ namespace JsonElementStream
             {
                 app.UseHsts();
             }
+            //return documents that have been uploaded just using the static file middleware.
             app.UseMiddleware<ElementStreamingMiddleware>();
-            app.UseHttpsRedirection();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(
+                 Path.Combine(Path.GetTempPath(), "StreamedFiles")),
+                RequestPath = "/api/document/download"
+            });
             app.UseMvc();
         }
     }

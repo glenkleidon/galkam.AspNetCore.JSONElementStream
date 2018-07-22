@@ -16,10 +16,12 @@ namespace ElementStreaming.Utilities
     public class DocumentController : ControllerBase
     {
         private readonly ElementStreamingRequestContext requestContext;
+        private readonly HttpContext httpContext;
 
-        public DocumentController(IElementStreamingRequestContextCollection requestContexts)
+        public DocumentController(IElementStreamingRequestContextCollection requestContexts, IHttpContextAccessor httpContext)
         {
             requestContext = requestContexts.ActiveContext();
+            this.httpContext = httpContext.HttpContext;
         }
         [Route("upload")]
         [HttpPost]
@@ -52,11 +54,16 @@ namespace ElementStreaming.Utilities
                     {
                         System.IO.File.Move(request.document, storeFilename);
 
+                        var uploadPath = httpContext.Request.Path.ToString().Replace("upload", "download",
+                            StringComparison.CurrentCultureIgnoreCase);
+
+                        var returnPath = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{uploadPath}/{Path.GetFileName(storeFilename)}";
+
                         var response = new UploadResponse
                         {
                             BytesReceived = fileSize,
                             Success = true,
-                            Location = storeFilename
+                            Location = returnPath
                         };
                         return Ok(response);
                     }
@@ -75,6 +82,5 @@ namespace ElementStreaming.Utilities
             }
             else return BadRequest(ModelState);
         }
-
     }
 }
