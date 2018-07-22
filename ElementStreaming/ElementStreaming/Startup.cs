@@ -42,7 +42,7 @@ namespace JsonElementStream
             {
                 app.UseHsts();
             }
-
+            app.UseMiddleware<ElementStreamingMiddleware>();
             app.UseHttpsRedirection();
             app.UseMvc();
         }

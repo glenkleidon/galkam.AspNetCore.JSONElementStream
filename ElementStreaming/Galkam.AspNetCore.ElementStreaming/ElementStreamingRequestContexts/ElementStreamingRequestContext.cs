@@ -23,7 +23,7 @@ namespace Galkam.AspNetCore.ElementStreaming
                    IElementStreamer elementStreamer)
         {
             streamer = elementStreamer;
-            EndPoints = EndPoints;
+            EndPoints = endPoints;
             Elements = elements;
             ContentTypes = contentTypes;
         }

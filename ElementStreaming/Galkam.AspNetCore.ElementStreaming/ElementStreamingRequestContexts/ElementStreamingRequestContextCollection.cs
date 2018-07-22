@@ -23,7 +23,7 @@ namespace Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts
 
         public ElementStreamingRequestContext GetRequestContext(HttpContext context)
         {
-            var activeContext = ElementStreamingRequestContexts.Where(r => r.CanHandleRequest(context)).First();
+            var activeContext = ElementStreamingRequestContexts.Where(r => r.CanHandleRequest(context)).FirstOrDefault();
             if (activeContext!=null) activeContext.Active = true;
             return activeContext;
         }

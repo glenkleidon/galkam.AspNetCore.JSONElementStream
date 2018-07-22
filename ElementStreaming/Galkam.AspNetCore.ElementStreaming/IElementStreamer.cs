@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.IO;
+using System.Threading.Tasks;
 
 namespace Galkam.AspNetCore.ElementStreaming
 {
@@ -13,9 +14,13 @@ namespace Galkam.AspNetCore.ElementStreaming
         Task<Enums.StreamerStatus> FlushIfComplete();
         bool IsComplete();
         Task<Enums.StreamerStatus> Next();
+        void Continue();
         Task StartOfElementData();
         Task EndOfData();
         Task WriteAlternateContent(string content);
+        Stream OutStream { get; set; }
+        Stream SourceStream { get; set; }
+        
         
     }
 }

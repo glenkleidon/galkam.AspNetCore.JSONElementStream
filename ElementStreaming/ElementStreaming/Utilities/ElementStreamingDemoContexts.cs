@@ -17,6 +17,7 @@ namespace JsonElementStream
         {
             // This application needs to handle the folowing situations:
             // Writing incoming base64 data to a temporary file.
+            this.ElementStreamingRequestContexts = new List<ElementStreamingRequestContext>();
             ConfigureJsonFileWriter();
 
             // You COULD also support XML if you use an implementation of XMLElementStreamer (not available in Release 1).
@@ -69,6 +70,7 @@ namespace JsonElementStream
                     {
                         if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
                     }
+                    handled = true;
                 }
                 else
                 {

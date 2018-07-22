@@ -14,8 +14,8 @@ namespace Galkam.AspNetCore.ElementStreaming
     /// </summary>
     public class JsonElementStreamer : IElementStreamer
     {
-        private readonly Stream sourceStream;
-        private readonly Stream outStream;
+        private Stream sourceStream;
+        private Stream outStream;
         private readonly StreamedElements elements;
 
         private string currentStreamPath = String.Empty;
@@ -41,6 +41,7 @@ namespace Galkam.AspNetCore.ElementStreaming
         private const byte BackSlash = 0x5C;
 
         private Enums.StreamerStatus status { get; set; } = Enums.StreamerStatus.None;
+        private Enums.StreamerStatus lastStatus = Enums.StreamerStatus.None;
 
         public bool FlushComplete { get; set; } = false;
         public JsonElementStreamer(StreamedElements elements)
@@ -137,6 +138,9 @@ namespace Galkam.AspNetCore.ElementStreaming
         public bool StreamIsValid { get => goodJson; }
 
         public string ElementPath => throw new NotImplementedException();
+
+        public Stream OutStream { get => outStream; set => outStream=value; }
+        public Stream SourceStream { get => sourceStream; set => sourceStream = value; }
 
         private void BadJson()
         {
@@ -590,7 +594,15 @@ namespace Galkam.AspNetCore.ElementStreaming
             }
             return Status;
         }
-
+        /// <summary>
+        /// Call this when the stream was previously exhausted and the streamer is thinking 
+        /// It is finished, but more data arrives.
+        /// </summary>
+        /// <returns></returns>
+        public void Continue()
+        {
+            if (Status == Enums.StreamerStatus.Complete) status = lastStatus;
+        }
 
         public async Task<Enums.StreamerStatus> Next()
         {
@@ -612,6 +624,7 @@ namespace Galkam.AspNetCore.ElementStreaming
                     bytesRead = await GetMoreBytesIfNeeded();
                     if (bytesRead == 0)
                     {
+                        lastStatus = Status;
                         status = Enums.StreamerStatus.Complete;
                     }
                     else
