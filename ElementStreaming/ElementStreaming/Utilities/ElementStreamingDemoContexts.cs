@@ -48,7 +48,7 @@ namespace JsonElementStream
             jsonRequestContext.OnElementCompleted =  s =>
             {
                 var handled = false;
-                var docElement = s.Elements[Constants.DocumentJsonPath];
+                var docElement = s.GetElement(Constants.DocumentJsonPath);
                 if (docElement != null && s.Streamer.ElementPath == Constants.DocumentJsonPath && docElement.IsComplete)
                 {
                     //Add a new context element indicating the size of the stream.
@@ -59,7 +59,7 @@ namespace JsonElementStream
                     var tmpFileName = docElement.TypedValue.AsString();
                     var newFilenameElement = new DynamicValueStreamWriter(tmpFileName);
                     s.Elements.Add(Constants.TempFileJsonPath, newFilenameElement);
-                    
+
                     //warning: this will write synchronously
                     s.Streamer.WriteAlternateContent(tmpFileName);
 
@@ -75,8 +75,8 @@ namespace JsonElementStream
                 else
                 {
                     // Check for unwanted file types we need to delete or block. 
-                    var fnameElement = s.Elements[Constants.FilenameJsonPath];
-                    var newFilenameElement = s.Elements[Constants.TempFileJsonPath];
+                    var fnameElement = s.GetElement(Constants.FilenameJsonPath);
+                    var newFilenameElement = s.GetElement(Constants.TempFileJsonPath);
 
                     if (s.Streamer.ElementPath == Constants.FilenameJsonPath && fnameElement.IsComplete)
                     {
@@ -87,7 +87,7 @@ namespace JsonElementStream
                         if (docElement != null)
                         {
                             // encounterd FileName first - so we can block the file from being written
-                            docElement.Ignore = true;
+                            docElement.Ignore = blockFile;
                         }
                         if (newFilenameElement != null)
                         {

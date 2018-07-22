@@ -43,7 +43,6 @@ namespace UnitTestJsonElementStreaming
         {
             using (var writer = new Base64ToTempFileWriter())
             {
-                writer.Filename = "unittest.txt";
                 await writer.WriteString(Constants.TestMessageB64_2);
                 writer.OutStream.Close();
                 var filename = writer.TypedValue.AsString();

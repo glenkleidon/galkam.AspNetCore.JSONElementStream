@@ -137,7 +137,7 @@ namespace Galkam.AspNetCore.ElementStreaming
         }
         public bool StreamIsValid { get => goodJson; }
 
-        public string ElementPath => throw new NotImplementedException();
+        public string ElementPath => JsonPath;
 
         public Stream OutStream { get => outStream; set => outStream=value; }
         public Stream SourceStream { get => sourceStream; set => sourceStream = value; }
@@ -648,7 +648,8 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         public async Task WriteAlternateContent(string content)
         {
-            var newContent = Encoding.UTF8.GetBytes(content);
+            var encodedContent = Newtonsoft.Json.JsonConvert.ToString(content).Replace("\"", "");
+            var newContent = Encoding.UTF8.GetBytes(encodedContent);
             await outStream.WriteAsync(newContent,0,newContent.Length);
         }
     }

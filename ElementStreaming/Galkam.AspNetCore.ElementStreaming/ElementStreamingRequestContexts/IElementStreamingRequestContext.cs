@@ -15,5 +15,6 @@ namespace Galkam.AspNetCore.ElementStreaming
         bool ElementFoundHandler();
         bool ElementCompleteHandler();
         bool Active { get; set; }
+        IElementStreamWriter GetElement(string key);
     }
 }

@@ -30,9 +30,9 @@ namespace ElementStreaming.Utilities
             if (ModelState.IsValid)
             {
                 // this example extracts the values without using a helper to make it easier to see what is going on.
-                
+
                 // Check if the file type was accepted.
-                var invalidFileType = requestContext.Elements[Constants.DocumentJsonPath]?.Ignore;
+                var invalidFileType = requestContext.GetElement(Constants.DocumentJsonPath)?.Ignore;
                 if (invalidFileType == true)
                 {
                     return Forbid($"File {request.fileName} is not supported.");
@@ -40,17 +40,30 @@ namespace ElementStreaming.Utilities
 
                 // Ok it looks like the file was received.  The temporary filename should be in the request now
                 // as the document field instead of the base64 data.
-                if (request.document!=null && System.IO.File.Exists(request.document))
+                if (request.document != null && System.IO.File.Exists(request.document))
                 {
-                    var fileSize = requestContext.Elements[Constants.ByteSizeJsonPath]?.TypedValue.AsInteger();
 
-                    var response = new UploadResponse
+                    var fileSize = requestContext.GetElement(Constants.ByteSizeJsonPath)?.TypedValue.AsInteger();
+
+                    // rename the file.
+                    var extn = Path.GetExtension(request.fileName);
+                    var storeFilename = Path.ChangeExtension(request.document, extn);
+                    try
                     {
-                        BytesReceived = fileSize,
-                        Success = true,
-                        Location = request.fileName
-                    };
-                    return Ok(response);
+                        System.IO.File.Move(request.document, storeFilename);
+
+                        var response = new UploadResponse
+                        {
+                            BytesReceived = fileSize,
+                            Success = true,
+                            Location = storeFilename
+                        };
+                        return Ok(response);
+                    }
+                    catch (Exception e)
+                    {
+                        return StatusCode(500, e);
+                    }
                 }
                 else
                 {
@@ -59,8 +72,9 @@ namespace ElementStreaming.Utilities
                         new { ErrorMsg = $"The uploaded file {request.fileName} could not be written" }
                     );
                 }
-            } else return BadRequest(ModelState);
+            }
+            else return BadRequest(ModelState);
         }
-     
+
     }
 }

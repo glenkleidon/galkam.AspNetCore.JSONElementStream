@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace Galkam.AspNetCore.ElementStreaming
 {
@@ -11,13 +12,17 @@ namespace Galkam.AspNetCore.ElementStreaming
         public StreamedElements(int capacity) : base(capacity) {}
         public void DiscardElement(string key)
         {
-            var element = this[key];
+            var element = GetElement(key);
             if (element != null)
             {
                 Remove(key);
                 element.Dispose();
             }
 
+        }
+        public IElementStreamWriter GetElement(string key)
+        {
+            return (ContainsKey(key)) ? this[key] : null;
         }
         
     }

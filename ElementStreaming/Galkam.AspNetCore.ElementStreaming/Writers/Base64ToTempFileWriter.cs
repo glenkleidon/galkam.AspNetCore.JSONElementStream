@@ -23,8 +23,11 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         }
         public string FullFilePath()
         {
-            var fname = (string.IsNullOrWhiteSpace(Filename)) ? Path.GetRandomFileName() : Filename;
-            return Path.Combine(Basefilepath, TemporarySubFolder,fname);
+            if (string.IsNullOrWhiteSpace(Filename))
+            {
+                Filename = Path.Combine(Basefilepath, TemporarySubFolder, Path.GetRandomFileName());
+            }
+            return Filename;
         }
         #endregion
 
@@ -34,7 +37,6 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         {
             get
             {
-                if (Filename == null) return null;
                 if (writer == null || !writer.Value.Equals(FullFilePath()))
                 {
                     writer = new StringValueStreamWriter(FullFilePath());

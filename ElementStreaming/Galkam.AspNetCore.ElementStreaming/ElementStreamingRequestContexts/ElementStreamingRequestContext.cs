@@ -70,5 +70,10 @@ namespace Galkam.AspNetCore.ElementStreaming
         {
             return (OnElementCompleted==null) ? false : OnElementCompleted(this);
         }
+
+        public IElementStreamWriter GetElement(string key)
+        {
+            return Elements.GetElement(key);
+        }
     }
 }

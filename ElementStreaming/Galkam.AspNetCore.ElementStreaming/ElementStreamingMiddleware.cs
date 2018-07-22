@@ -22,10 +22,11 @@ namespace Galkam.AspNetCore.ElementStreaming
             var handlerContext = streamContext.GetRequestContext(context);
             if (handlerContext == null)
             {
-                await next.Invoke(context);
+                await next(context);
             }
             else
             {
+                var bodyStream = context.Response.Body;
                 using (var incomingStream = new MemoryStream())
                 {
                     var jsonStreamer = handlerContext.Streamer;
@@ -39,23 +40,28 @@ namespace Galkam.AspNetCore.ElementStreaming
                                 switch (jsonStreamer.Status)
                                 {
                                     case Enums.StreamerStatus.StartOfData:
-                                        handlerContext.ElementFoundHandler();
+                                        handlerContext?.ElementFoundHandler();
                                         break;
                                     case Enums.StreamerStatus.EndOfData:
                                         handlerContext.ElementCompleteHandler();
                                         break;
                                 }
-                           // Console.WriteLine(context.Request.Body.Length);
                             }
                             while (jsonStreamer.Status != Enums.StreamerStatus.Complete);
                     }
                     finally
                     {
                         context.Request.Body.Dispose();
+                        incomingStream.Position = 0;
+                        // logging:
+                        var logbuffer = new byte[incomingStream.Length];
+                        incomingStream.Read(logbuffer, 0, (int)incomingStream.Length);
+                        Console.WriteLine($"Request to {context.Request.Path}");
+                        Console.WriteLine(Encoding.Default.GetString(logbuffer));
+                        incomingStream.Position = 0;
                         context.Request.Body = incomingStream;
-                        context.Request.Body.Position = 0;
                     }
-                    await next.Invoke(context);
+                    await next(context);
                 }
             }
         }
