@@ -2,9 +2,9 @@
 ------------------------------------
 
 ## Purpose:
-_*Galkam.ASPNetCore.ElementStreaming*_ is an ASPNetCore Web Host middleware that allows large json objects to be intercepted in the request body and streamed directly to an alternate stream and retreived in the controller in a context object.
+_*Galkam.ASPNetCore.ElementStreaming*_ is an ASPNetCore Web Host middleware that allows large json objects to be intercepted in the request body and streamed directly to an alternate stream.  The alternate stream can be accessed in the controller from an injected context.
 
-The primary purose is to minimise large objects building up in memory.  
+The primary purpose is to minimise large objects building up in memory.  
 
 ## Reducing the load on your service:
 Imagine you have to accept documents from a client sending base64 encoded files as a json element.
@@ -16,7 +16,7 @@ Imagine you have to accept documents from a client sending base64 encoded files 
     "document":"iVBORw0KGgoAAAANSUhEUgAAAE0A...<20MB>=="
 }
 ```
-The View model for this Json is: 
+The incoming model for this Json is something like: 
 ```
  public class UploadRequest
     {
@@ -26,8 +26,8 @@ The View model for this Json is:
         public string document { get; set; }
     }
 ```
-
-Without any middleware to manage this, a 20MB document would be parsed by the body parser and passed into your controller as a string on the view model.
+Using the [FromBody] attribute, the model is populated by the Json parser before entering the endpoints method.
+Without any middleware to manage this, a 20MB document would be parsed by the body parser and passed into your controller as a string on the model.
 
 Because it is base64 encoded, the 20MB document becomes (4/3 * 20MB) = 26.7MB.
 
@@ -35,7 +35,7 @@ Now in order to convert the base64 data back into a binary stream so that it can
 ```
    var bytes = Convert.FromBase64String(request.document);
    var memstream = new MemoryStream(bytes)
-   // now we can post
+   // now we can write or post memstream.
 ```
 
 This seems pretty simple right?  But take a moment to think of what you are holding in memory. You have 26MB String, 20MB byte array, and a 20MB memory stream.  Depending on how clever the compiler has been, you are likely to have more than 3 times the data in memory that is required for the object.  This does not take into account any work that the body parser may have done to create the string object.
@@ -48,7 +48,7 @@ The ElementStreaming middleware is told to watch out for a json element called _
 
 As bytes arrive in the request body, the middleware will decode the base64 data in small chunks so that the overall memory required is just the original 20MB when it eventually arrives on the controller.  
 
-Taking this one step further, by descending the middleware _Base64StremWriter_ class, it is possible to redirect the binary bytes directly to a file.  In fact, release 1 includes a generic implementation called _Base64ToTempFileWriter_ which redirects base64 encoded data to a file in the service user's _**TEMP**_ folder. This reducing the overall in-memory load down to a few hundred bytes.  Instead of the bytes arriving on the controller, the _**document**_ element content is transparently replaced with the file path and the resultant json object becomes:
+Taking this one step further, by descending the middleware _Base64StremWriter_ class, it is possible to redirect the binary bytes directly to a file.  In fact, release 1 includes a generic implementation called _Base64ToTempFileWriter_ which redirects base64 encoded data to a file in the service user's _**TEMP**_ folder. This reduces the overall in-memory load down to a few hundred bytes.  Instead of the bytes arriving on the controller, the _**document**_ element content is transparently replaced with the file path and the resultant json object becomes:
 
 ```
 {
@@ -115,25 +115,28 @@ public class ElementStreamingDemoContexts : ElementStreamingRequestContextCollec
 
     private void ConfigureJsonFileWriter()
     {
-        // 1. Identify the elements, and their types.
+        // Create elements Collection, then add their Path and ElementWriterType.
         var elements = new StreamedElements();
         
         // I want to be able to intercept a Base64 encoded element and string property
         elements.Add("$.document", new Base64ToTempFileWriter());
         elements.Add("$.fileName", new StringValueStreamWriter());
+  
+        // Specify when to use this Context 
+        var jsonEndpoints = new List<string>() { "/api/document/upload" };
+        var jsonContentTypes = new List<string>() { "application/json", "application/json;charset=utf-8" };
 
-        // Now plug in a Element Streamer.
+        // Now create in a Element Streamer.
         var elementStreamer = new JsonElementStreamer(elements);
+        
+        // And plug into a new context
         var jsonRequestContext = new ElementStreamingRequestContext(jsonEndpoints, jsonContentTypes, elements, elementStreamer);
           
         // Add event handlers to manage the events - do nothing.   
         jsonRequestContext.OnElementStarting = s => true; // do nothing when the element name is detected
-
-        jsonRequestContext.OnElementCompleted = s =>
-        true; // do nothing when the element data is complete. 
+        jsonRequestContext.OnElementCompleted = s => true; // do nothing when the element data is complete. 
 
         this.ElementStreamingRequestContexts.Add(jsonRequestContext);
-
     }
 
 }
@@ -158,7 +161,7 @@ public void ConfigureServices(IServiceCollection services)
 
 The controller example below shows how the Request collection can be accessed. 
 
-There will only be 1 active RequestContext in the collection (with scoped lifetime, the collection is created for each request), so use constructor injection to retrieve the correct request context for the collection.  You may also want to access the http context in certain circumstances.  As you can only use one _**[FromBody]**_ parameter, it is cleaner to create a reference to the context in the controllers constructor.
+There will only be 1 active RequestContext in the collection (with scoped lifetime, the collection is created for each request), so use constructor injection to retrieve the correct request context from the collection.  You may also want to access the http context in certain circumstances.  As you can only use one _**[FromBody]**_ parameter, it is cleaner to create a reference to the context in the controllers constructor.
 
 ```
 [Route("api/[controller]")]
@@ -175,16 +178,16 @@ public class DocumentController : ControllerBase
     }
     ...
 ```
-At the specific endpoint, use the request context's _GetElement()_ method to retrieve the _ElementStreamWriter_.  For intercepted data, you will need to access the _**OutStream**_ property to get a reference to the internal stream.  THis is usually implemented as a memory stream, but you can write your own custom _IElementStreamWriter_ to handle the data differently.
+At the specific endpoint, use the request context's _GetElement()_ method to retrieve the _ElementStreamWriter_.  For intercepted data, you will need to access the _**OutStream**_ property to get a reference to the internal stream.  This is usually implemented as a memory stream, but you can write your own custom _IElementStreamWriter_ to handle the data differently.  For the ValueElementStreamers, access the _**TypedValue**_ property then the appropriate _**As**_ method to get the value.  The _**TypedValue**_ is actually loosely typed however specific and implementations of incompatible properties will return _null_ (they will not throw exceptions).  The _**ToString()**_ method will always return the data as a string, but the _**AsString()**_ method will return _null_ for incompatible types.
 
-Here is an example:
+Here is an example Contoller:
 
 ```
     [Route("upload")]
     [HttpPost]
     public ActionResult Upload([FromBody] UploadRequest request)
     {
-        // Check that eh request context was received as expected.
+        // Check that the request context was received as expected.
         if (requestContext == null) ModelState.AddModelError("RequestContext", "Expected Element Streaming Context was not found in request");
         if (ModelState.IsValid)
         {
@@ -305,7 +308,7 @@ jsonRequestContext.OnElementCompleted = s =>
             var fname = fnameElement.TypedValue.AsString();
             var extn = Path.GetExtension(fname);
             var blockedTypes = new List<string>() { ".exe", ".svg", ".dll", ".bat", ".com", ".sh", ".ps1" };
-            var blockFile = blockedTypes.Any(t => t.ToLower() == extn);
+            var blockFile = blockedTypes.Any(t => t.Equals(extn.ToLower()));
             if (docElement != null)
             {
                 // encounterd FileName first - so we can block the file from being written
@@ -327,4 +330,66 @@ jsonRequestContext.OnElementCompleted = s =>
 
 ```
 
-You can create Anonymous methods directly in your configure method or attach 
+So, now with the more advanced handling in the middleware, much more information is available to return to the caller.  We are also able to change the file extension of the temporary file.
+```
+  [Route("upload")]
+        [HttpPost]
+        public ActionResult Upload([FromBody] UploadRequest request)
+        {
+            // Check that the request context was received as expected.
+            if (requestContext == null) ModelState.AddModelError("RequestContext", "Expected Element Streaming Context was not found in request");
+            if (ModelState.IsValid)
+            {
+                // this example extracts the values without using a helper to make it easier to see what is going on.
+
+                // Check if the file type was accepted.
+                var invalidFileType = requestContext.GetElement(Constants.DocumentJsonPath)?.Ignore;
+                if (invalidFileType == true)
+                {
+                    var errorMsg = $"File {request.fileName} is not supported.";
+                    if (request.document == null) errorMsg= "Document cannot be null";
+                    return BadRequest(errorMsg);
+                }
+
+                // Ok it looks like the file was received.  The temporary filename should be in the request now
+                // as the document field instead of the base64 data.
+                if (request.document != null && System.IO.File.Exists(request.document))
+                {
+
+                    var fileSize = requestContext.GetElement(Constants.ByteSizeJsonPath)?.TypedValue.AsInteger();
+
+                    // rename the file.
+                    var extn = Path.GetExtension(request.fileName);
+                    var storeFilename = Path.ChangeExtension(request.document, extn);
+                    try
+                    {
+                        System.IO.File.Move(request.document, storeFilename);
+
+                        var uploadPath = httpContext.Request.Path.ToString().Replace("upload", "download",
+                            StringComparison.CurrentCultureIgnoreCase);
+
+                        var returnPath = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{uploadPath}/{Path.GetFileName(storeFilename)}";
+
+                        var response = new UploadResponse
+                        {
+                            BytesReceived = fileSize,
+                            Success = true,
+                            Location = returnPath
+                        };
+                        return Ok(response);
+                    }
+                    catch (Exception e)
+                    {
+                        return StatusCode(500, e);
+                    }
+                }
+                else
+                {
+                    // ok something went wrong writing the file.
+                    var ErrorMsg = $"The uploaded file {request.fileName} could not be written";
+                    return StatusCode(StatusCodes.Status500InternalServerError, ErrorMsg);
+                }
+            }
+            else return BadRequest(ModelState);
+        }
+```
