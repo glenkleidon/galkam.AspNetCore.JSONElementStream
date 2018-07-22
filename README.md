@@ -156,74 +156,78 @@ public void ConfigureServices(IServiceCollection services)
 
 ### Accessing the Context in the Contoller:
 
+The controller example below shows how the Request collection can be accessed. 
+
+There will only be 1 active RequestContext in the collection (with scoped lifetime, the collection is created for each request), so use constructor injection to retrieve the correct request context for the collection.  You may also want to access the http context in certain circumstances.  As you can only use one _**[FromBody]**_ parameter, it is cleaner to create a reference to the context in the controllers constructor.
+
 ```
-    [Route("api/[controller]")]
-    [ApiController]
-    public class DocumentController : ControllerBase
+[Route("api/[controller]")]
+[ApiController]
+public class DocumentController : ControllerBase
+{
+    private readonly ElementStreamingRequestContext requestContext;
+    private readonly HttpContext httpContext;
+
+    public DocumentController(IElementStreamingRequestContextCollection requestContexts, IHttpContextAccessor httpContext)
     {
-        private readonly ElementStreamingRequestContext requestContext;
-        private readonly HttpContext httpContext;
+        requestContext = requestContexts.ActiveContext();
+        this.httpContext = httpContext.HttpContext;
+    }
+    ...
+```
+At the specific endpoint, use the request context's _GetElement()_ method to retrieve the _ElementStreamWriter_.  For intercepted data, you will need to access the _**OutStream**_ property to get a reference to the internal stream.  THis is usually implemented as a memory stream, but you can write your own custom _IElementStreamWriter_ to handle the data differently.
 
-        public DocumentController(IElementStreamingRequestContextCollection requestContexts, IHttpContextAccessor httpContext)
+Here is an example:
+
+```
+    [Route("upload")]
+    [HttpPost]
+    public ActionResult Upload([FromBody] UploadRequest request)
+    {
+        // Check that eh request context was received as expected.
+        if (requestContext == null) ModelState.AddModelError("RequestContext", "Expected Element Streaming Context was not found in request");
+        if (ModelState.IsValid)
         {
-            requestContext = requestContexts.ActiveContext();
-            this.httpContext = httpContext.HttpContext;
-        }
-        [Route("upload")]
-        [HttpPost]
-        public ActionResult Upload([FromBody] UploadRequest request)
-        {
-            // Check that eh request context was received as expected.
-            if (requestContext == null) ModelState.AddModelError("RequestContext", "Expected Element Streaming Context was not found in request");
-            if (ModelState.IsValid)
+            if (request.document != null)
             {
-                // this example extracts the values without using a helper to make it easier to see what is going on.
-
-                // Check if the file type was accepted.
-                if (request.document != null )
+                var doc = requestContext.GetElement("$.document");
+                var fileSize = doc.OutStream.Length;
+                if (fileSize > 0)
                 {
-
-                    var fileSize = requestContext.GetElement(Constants.ByteSizeJsonPath)?.TypedValue.AsInteger();
-
-                    // rename the file.
-                    var extn = Path.GetExtension(request.fileName);
-                    var storeFilename = Path.ChangeExtension(request.document, extn);
-                    try
+                    // write the file.
+                    using (BinaryWriter writer = new BinaryWriter(
+                        System.IO.File.Open(Path.Combine(Path.GetTempPath(), request.fileName),
+                                            FileMode.Create))
+                    )
                     {
-                        System.IO.File.Move(request.document, storeFilename);
-
-                        var uploadPath = httpContext.Request.Path.ToString().Replace("upload", "download",
-                            StringComparison.CurrentCultureIgnoreCase);
-
-                        var returnPath = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}{uploadPath}/{Path.GetFileName(storeFilename)}";
-
-                        var response = new UploadResponse
+                        var buffer = new Byte[4096];
+                        var bytesRead = 4096;
+                        while (bytesRead == 4096)
                         {
-                            BytesReceived = fileSize,
-                            Success = true,
-                            Location = returnPath
-                        };
-                        return Ok(response);
+                            bytesRead = doc.OutStream.Read(buffer, 0, 4096);
+                            writer.Write(buffer, 0, bytesRead);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        return StatusCode(500, e);
-                    }
+                    return Ok($"Document {request.fileName} accepted");
                 }
                 else
                 {
-                    // ok something went wrong writing the file.
                     var ErrorMsg = $"The uploaded file {request.fileName} could not be written";
                     return StatusCode(StatusCodes.Status500InternalServerError, ErrorMsg);
                 }
             }
-            else return BadRequest(ModelState);
+            else
+            {
+                BadRequest("Document Cannot be null");
+            }
         }
+        else return BadRequest(ModelState);
     }
 }
 ```
+## Advanced Event Handling.
 
-Finally, the code for handling the events when the specific elements are detected need to be added.
+Custom code for handling the events when the specific elements are detected can be added in order to manage specialised tasks.
 
 There are two delegates which are called when the middleware detects each element name and the data is ready to be received, and also when the data has been handled by the specific writer and the data is complete.
 
@@ -237,11 +241,90 @@ jsonRequestContext.OnElementCompleted = s =>
 true; // do nothing when the element data is complete. 
 
 ```   
-The snippet of code above does nothing with the events which means that in the contoller, the ElementStreamWriters for each element will be holding a reference to the data in memory. 
-
+The snippet of code **above** does nothing with the events which means that in the contoller, the ElementStreamWriters for each element will be holding a reference to the data in memory. 
 
 The following configuration is an example of how the Event handlers can be used to achieve powerful results.
+It peforms the following actions:
 
 
+* The base64 data decoded and is streamed directly to a temporary file as bytes
+* The incoming Base64 stream is _replaced_ with the temporary file name so that the request element "document" will arrive in the controller as the filename, instead of B64 data.
+* The file size is added to the context using a _DynamicValueStreamWriter_ and is available in the controller from the context
+* The Type of file is checked and certain file types are ignored - such as exe and dll files.
+
+The handlers are implemented in the _ConfigureJsonWriter_ method of your configuration class. In this example, the _**OnElementCompleted**_ handler is implemented as an anonymous (labmda) function, but it could also be added as a class function.
+
+
+```
+jsonRequestContext.OnElementStarting = s => true; // do nothing for starting
+
+jsonRequestContext.OnElementCompleted = s =>
+{
+    var handled = false;
+    var docElement = s.GetElement(Constants.DocumentJsonPath);
+    if (docElement != null && s.Streamer.ElementPath == Constants.DocumentJsonPath && docElement.IsComplete)
+    {
+        //Add a new context element indicating the size of the stream.
+        var fileSize = docElement.OutStream.Length;
+        var tmpFileName = docElement.TypedValue.AsString();
+        if (fileSize > 0) // check for the null case
+        {
+            var sizeElement = new DynamicValueStreamWriter(docElement.OutStream.Length.ToString());
+            s.Elements.Add(Constants.ByteSizeJsonPath, sizeElement);
+
+            // substitute the original base64 code with the filename:
+            var newFilenameElement = new DynamicValueStreamWriter(tmpFileName);
+            s.Elements.Add(Constants.TempFileJsonPath, newFilenameElement);
+
+            //warning: this will write synchronously
+            s.Streamer.WriteAlternateContent(tmpFileName);
+
+            // and now get rid of that streamer - as we now have a file reference.
+            s.Elements.DiscardElement(Constants.DocumentJsonPath);
+        }
+        else
+        {
+            docElement.Ignore = true;
+            docElement.OutStream.Dispose();
+        }
+        // was this a file we previously decided to discard?
+        if (docElement.Ignore)
+        {
+            if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
+        }
+        handled = true;
+    }
+    else
+    {
+        // Check for unwanted file types we need to delete or block. 
+        var fnameElement = s.GetElement(Constants.FilenameJsonPath);
+        var newFilenameElement = s.GetElement(Constants.TempFileJsonPath);
+
+        if (s.Streamer.ElementPath == Constants.FilenameJsonPath && fnameElement.IsComplete)
+        {
+            var fname = fnameElement.TypedValue.AsString();
+            var extn = Path.GetExtension(fname);
+            var blockedTypes = new List<string>() { ".exe", ".svg", ".dll", ".bat", ".com", ".sh", ".ps1" };
+            var blockFile = blockedTypes.Any(t => t.ToLower() == extn);
+            if (docElement != null)
+            {
+                // encounterd FileName first - so we can block the file from being written
+                docElement.Ignore = blockFile;
+            }
+            if (newFilenameElement != null)
+            {
+                var tmpFileName = newFilenameElement.TypedValue.AsString();
+                // we have already written it, delete it now.
+                if (File.Exists(tmpFileName)) File.Delete(tmpFileName);
+            }
+            handled = true;
+        }
+    }
+
+    return handled;
+
+};
+
+```
 
 You can create Anonymous methods directly in your configure method or attach 
