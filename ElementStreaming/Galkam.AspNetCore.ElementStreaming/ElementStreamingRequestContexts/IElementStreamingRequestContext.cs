@@ -14,5 +14,6 @@ namespace Galkam.AspNetCore.ElementStreaming
         bool CanHandleRequest(HttpContext context);
         bool ElementFoundHandler();
         bool ElementCompleteHandler();
+        bool Active { get; set; }
     }
 }

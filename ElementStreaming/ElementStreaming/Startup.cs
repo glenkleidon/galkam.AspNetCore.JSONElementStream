@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Galkam.AspNetCore.ElementStreaming;
+using Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts;
 
 namespace JsonElementStream
 {

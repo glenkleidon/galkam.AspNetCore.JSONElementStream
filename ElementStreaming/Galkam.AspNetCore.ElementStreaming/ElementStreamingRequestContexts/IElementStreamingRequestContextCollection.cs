@@ -5,10 +5,11 @@ using System.Text;
 
 namespace Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts
 {
-    interface IElementStreamingRequestContextCollection
+    public interface IElementStreamingRequestContextCollection
     {
-        ICollection<IElementStreamingRequestContext> ElementStreamingRequestContexts { get; set; }
-        IElementStreamingRequestContext GetRequestHandler(HttpContext context);
+        ICollection<ElementStreamingRequestContext> ElementStreamingRequestContexts { get; set; }
+        ElementStreamingRequestContext GetRequestContext(HttpContext context);
         void Configure();
+        ElementStreamingRequestContext ActiveContext();
     }
 }

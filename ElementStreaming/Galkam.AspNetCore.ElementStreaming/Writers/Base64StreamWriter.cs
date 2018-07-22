@@ -77,6 +77,7 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
 
         public virtual bool Intercept { get; set; } = true;
         public bool IsComplete { get; set; } = false;
+        public bool Ignore { get; set; } = false;
 
         public Base64StreamWriter()
         {
@@ -97,7 +98,7 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
             var charsToWrite = 4 * ((int)(textToWrite.Length / 4));
             var newChars = Convert.FromBase64String(textToWrite.Substring(0, charsToWrite));
             unwritten = (charsToWrite < textToWrite.Length) ? textToWrite.Substring(charsToWrite) : "";
-            await OutStream.WriteAsync(newChars, 0, newChars.Length);
+            if (!Ignore) await OutStream.WriteAsync(newChars, 0, newChars.Length);
             return charsToWrite;
         }
         /// <summary>
@@ -140,14 +141,8 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
             {
                 unwritten = new string(buffer, count - unwrittenSize, unwrittenSize);
             }
-            await OutStream.WriteAsync(newBytes, 0, newBytes.Length);
+            if (!Ignore) await OutStream.WriteAsync(newBytes, 0, newBytes.Length);
             return charsToWrite;
         }
-
-        public void Discard()
-        {
-            Dispose();
-        }
-
     }
 }

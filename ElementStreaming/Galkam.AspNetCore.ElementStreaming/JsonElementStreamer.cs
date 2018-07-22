@@ -632,5 +632,11 @@ namespace Galkam.AspNetCore.ElementStreaming
         {
             await Task.CompletedTask;
         }
+
+        public async Task WriteAlternateContent(string content)
+        {
+            var newContent = Encoding.UTF8.GetBytes(content);
+            await outStream.WriteAsync(newContent,0,newContent.Length);
+        }
     }
 }

@@ -6,6 +6,14 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
     public class DynamicValueStreamWriter : BaseValueStreamWriter, IValueStreamWriter
     {
+        private string defaultValue;
+        public DynamicValueStreamWriter() : base()
+        {
+        }
+        public DynamicValueStreamWriter(string valueIfEmpty)
+        {
+            this.defaultValue = valueIfEmpty;
+        }
         public override Type ValueType => null;
 
         public dynamic Value { get => AsString(); } 
@@ -79,6 +87,10 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         }
         public override string AsString()
         {
+            if (!hasWrites)
+            {
+                return (defaultValue != null) ? defaultValue : null;
+            }
             return this.ToString();
         }
 

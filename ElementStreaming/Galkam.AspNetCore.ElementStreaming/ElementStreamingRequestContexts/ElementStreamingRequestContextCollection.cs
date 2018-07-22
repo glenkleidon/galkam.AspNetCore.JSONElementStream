@@ -12,13 +12,20 @@ namespace Galkam.AspNetCore.ElementStreaming.ElementStreamingRequestContexts
         {
             Configure();
         }
-        public ICollection<IElementStreamingRequestContext> ElementStreamingRequestContexts { get ; set; }
+        public ICollection<ElementStreamingRequestContext> ElementStreamingRequestContexts { get ; set; }
+
+        public ElementStreamingRequestContext ActiveContext()
+        {
+            return ElementStreamingRequestContexts.Where(c => c.Active).FirstOrDefault();
+        }
 
         public abstract void Configure();
 
-        public IElementStreamingRequestContext GetRequestHandler(HttpContext context)
+        public ElementStreamingRequestContext GetRequestContext(HttpContext context)
         {
-            return ElementStreamingRequestContexts.Where(r => r.CanHandleRequest(context)).First();
+            var activeContext = ElementStreamingRequestContexts.Where(r => r.CanHandleRequest(context)).First();
+            if (activeContext!=null) activeContext.Active = true;
+            return activeContext;
         }
 
     }

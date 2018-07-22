@@ -14,5 +14,6 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         bool CanIntercept { get; }
         bool Intercept { get; set; }
         bool IsComplete { get; set; }
+        bool Ignore { get; set; }
      }
 }

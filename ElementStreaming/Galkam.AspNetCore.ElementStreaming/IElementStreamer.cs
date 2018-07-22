@@ -15,6 +15,7 @@ namespace Galkam.AspNetCore.ElementStreaming
         Task<Enums.StreamerStatus> Next();
         Task StartOfElementData();
         Task EndOfData();
+        Task WriteAlternateContent(string content);
         
     }
 }

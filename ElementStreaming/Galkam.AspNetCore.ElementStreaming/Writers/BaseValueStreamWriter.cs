@@ -38,10 +38,19 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
         }
 
         public abstract Type ValueType { get; }
-
+        /// <summary>
+        /// Some writers are not able to prevent the data from being written out to the OUTSTREAM.
+        /// in Release 1, only String and null types can ben intercepted.  Boolean and Number types cannot.
+        /// </summary>
         public virtual bool CanIntercept => false;
-
+        /// <summary>
+        /// If CanIntercept is ture, Intercept will prevent the data from being written to the original stream 
+        /// </summary>
         public virtual bool Intercept { get; set; } = false;
+        /// <summary>
+        /// If set to True, Intercept will be respected but the data will be not be written to the streamer 
+        /// </summary>
+        public bool Ignore { get; set; } = false;
 
         public virtual DateTime? AsDateTime()
         {
@@ -147,7 +156,7 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
 
         public virtual async Task<int> Write(char[] buffer, int offset, int count)
         {
-            await writer.WriteAsync(buffer, offset, count);
+            if (!Ignore) await writer.WriteAsync(buffer, offset, count);
             hasWrites = count > 0;
             return count;
         }

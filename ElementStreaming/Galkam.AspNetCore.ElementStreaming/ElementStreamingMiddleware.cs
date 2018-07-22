@@ -19,8 +19,8 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         public async Task Invoke(HttpContext context, IElementStreamingRequestContextCollection streamContext)
         {
-            var handler = streamContext.GetRequestHandler(context);
-            if (handler!=null)
+            var handlerContext = streamContext.GetRequestContext(context);
+            if (handlerContext!=null)
             {
                 await next.Invoke(context);
             }
@@ -28,7 +28,7 @@ namespace Galkam.AspNetCore.ElementStreaming
             {
                 using (var incomingStream = new MemoryStream())
                 {
-                    var JsonStreamer = handler.Streamer;
+                    var JsonStreamer = handlerContext.Streamer;
                     try
                     {
                         do
@@ -37,10 +37,10 @@ namespace Galkam.AspNetCore.ElementStreaming
                             switch (JsonStreamer.Status)
                             {
                                 case Enums.StreamerStatus.StartOfData:
-                                    handler.ElementFoundHandler();
+                                    handlerContext.ElementFoundHandler();
                                     break;
                                 case Enums.StreamerStatus.EndOfData:
-                                    handler.ElementCompleteHandler();
+                                    handlerContext.ElementCompleteHandler();
                                     break;
                             }
                     }

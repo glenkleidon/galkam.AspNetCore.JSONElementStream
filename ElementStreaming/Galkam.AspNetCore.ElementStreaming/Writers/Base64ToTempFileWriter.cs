@@ -5,7 +5,7 @@ using System.IO;
 
 namespace Galkam.AspNetCore.ElementStreaming.Writers
 {
-    public delegate bool ElementStreamingHandler(IElementStreamingRequestContextCollection requestContext);
+    public delegate bool ElementStreamingHandler(IElementStreamingRequestContext requestContext);
 
     /// <summary>
     /// Accepts a Base64 Stream and writes it to a temporary file stream.
@@ -14,7 +14,6 @@ namespace Galkam.AspNetCore.ElementStreaming.Writers
     {
         #region Class properties needed for File 
         private FileStream fileStream;
-        private string filePrefix;
         public string Basefilepath { get; set; } = Path.GetTempPath();
         public string TemporarySubFolder { get; set; } = "StreamedFiles";
         public string Filename { get; set; }

@@ -11,7 +11,7 @@ namespace Galkam.AspNetCore.ElementStreaming
     /// Generic Element Streaming Request Context which can be used or descended to produce specific
     /// behaviour: eg to stream a file to disk as it arrives create a FileStreamingElementRequestContext.
     /// </summary>
-    public class ElementStreamingRequestContext : IElementStreamingRequestContextCollection
+    public class ElementStreamingRequestContext : IElementStreamingRequestContext
     {
         private IElementStreamer streamer;
         public ElementStreamingRequestContext()
@@ -46,6 +46,7 @@ namespace Galkam.AspNetCore.ElementStreaming
 
         public ElementStreamingHandler OnElementCompleted { get ; set; }
         public ElementStreamingHandler OnElementStarting { get; set ; }
+        public bool Active { get; set; } = false;
 
         public virtual bool CanHandleRequest(HttpContext context)
         {
