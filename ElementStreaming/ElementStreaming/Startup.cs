@@ -46,8 +46,9 @@ namespace JsonElementStream
             {
                 app.UseHsts();
             }
-            //return documents that have been uploaded just using the static file middleware.
             app.UseMiddleware<ElementStreamingMiddleware>();
+
+            //return documents that have been uploaded just using the static file middleware.
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(
